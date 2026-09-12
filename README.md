@@ -11,11 +11,13 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 0 — Architecture & Threat Model (awaiting validation)
+## Status: PHASE 1 complete — repository & infrastructure scaffolding
 
-No application code has been written yet. Per the working agreement, Phase 0
-delivers the architecture package below for review; Phase 1 (repository
-scaffolding + infrastructure) starts only after this is validated.
+Phase 0 (architecture/threat model) is validated. Phase 1 delivers the
+repository skeleton, Docker Compose stack, CI pipeline, and Alembic wiring —
+no authentication, ingestion, detection, or real dashboard yet; see
+`docs/DEVELOPMENT_PLAN.md` for what each subsequent phase adds. Quickstart:
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Phase 0 deliverables
 
@@ -44,5 +46,5 @@ scaffolding + infrastructure) starts only after this is validated.
 
 ## Next step
 
-Review the Phase 0 package and confirm before Phase 1 (repository +
-infrastructure scaffolding) begins.
+Phase 2 — Authentication + RBAC + multi-tenancy (see
+`docs/DEVELOPMENT_PLAN.md`).
