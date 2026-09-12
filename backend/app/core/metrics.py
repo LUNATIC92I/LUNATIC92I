@@ -62,3 +62,21 @@ ingestion_latency_seconds = Histogram(
     "Time from event receipt to publication on the event bus",
     ["source_type"],
 )
+
+events_processed_total = Counter(
+    "events_processed_total",
+    "Events successfully parsed, normalized and published onward",
+    ["format"],
+)
+
+parser_errors_total = Counter(
+    "parser_errors_total",
+    "Payloads no parser could handle, or that failed normalization",
+    ["stage"],
+)
+
+processing_latency_seconds = Histogram(
+    "processing_latency_seconds",
+    "Time to parse and normalize one event",
+    ["format"],
+)

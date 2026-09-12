@@ -11,29 +11,30 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 3 complete — event ingestion
+## Status: PHASE 4 complete — parsing & OCSF normalization
 
-Phases 0–2 (architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy) are done. Phase 3 adds the ingestion path: a common
-collector interface with syslog UDP/TCP listeners and a REST gateway, the
-`EventBus` abstraction over Redis Streams (Kafka-swappable, proven by an
-in-memory implementation of the same interface), per-tenant rate limiting,
-retry-safe deduplication, and a dead-letter path so a malformed or
-oversized event is preserved and replayable rather than dropped.
+Phases 0–3 (architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy, event ingestion) are done. Phase 4 adds the parsing stage: a
+common parser interface with JSON, syslog (RFC 3164 + 5424), CEF, LEEF,
+Windows Event XML, Apache/Nginx access log and generic `key=value` parsers,
+priority-ordered format detection, and mapping into OCSF 1.1.0 with the
+flat indexed projections the search layer needs. The raw payload is carried
+through untouched at every step.
 
-Events currently land on `events.raw` and stop there — parsing/OCSF
-normalization is Phase 4 and detection is Phase 6. The frontend is still
+Normalized events currently land on `events.normalized` and stop there —
+OpenSearch indexing is Phase 5, detection is Phase 6. The frontend is still
 the Phase 1 placeholder. Quickstart:
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
-72/72 backend tests passing against real PostgreSQL and real Redis. Beyond
-the Phase 2 auth/RBAC/RLS suite, Phase 3 covers: at-least-once redelivery
-of unacked messages, dead-letter routing, syslog allowlist fail-closed
-behavior (an empty allowlist accepts nothing), oversized-datagram and
-endless-TCP-line rejection, real-socket UDP/TCP round trips, retry
-deduplication that is per-tenant rather than global, and collector API keys
-that cannot be forged, replayed against another tenant, or used after
-revocation. Ruff, mypy, Bandit, and pip-audit all clean.
+130/130 backend tests passing against real PostgreSQL and real Redis. Phase
+4 adds, per format, a positive case and a malformed case proving rejection
+rather than a crash or silent junk; XXE and billion-laughs refusal on
+Windows XML; a fuzz-ish sweep asserting the registry's only failure mode is
+`ParserError`; proof that a crashing parser degrades to a dead-lettered
+event instead of stalling the pipeline; and a contract test that fails the
+build if the normalizer emits a field the OpenSearch mapping never declared
+(which, under `dynamic: false`, would be silently unsearchable). Ruff,
+mypy, Bandit, and pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -62,6 +63,6 @@ revocation. Ruff, mypy, Bandit, and pip-audit all clean.
 
 ## Next step
 
-Phase 4 — Normalization: parsers (JSON, syslog, CEF, LEEF, Windows Event
-XML, Apache/Nginx) feeding OCSF 1.1.0 mapping (see
-`docs/DEVELOPMENT_PLAN.md`).
+Phase 5 — OpenSearch integration: index templates and ILM, the enrichment
+pipeline, and Document-Level Security as the second tenant-isolation layer
+on the event store (see `docs/DEVELOPMENT_PLAN.md`).

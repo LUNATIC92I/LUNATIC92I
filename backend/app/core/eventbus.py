@@ -34,6 +34,7 @@ def _as_bytes(value: object) -> bytes:
 # EventBus topic names (ARCHITECTURE.md §7.1).
 TOPIC_EVENTS_RAW = "events.raw"
 TOPIC_EVENTS_DEADLETTER = "events.raw.deadletter"
+TOPIC_EVENTS_NORMALIZED = "events.normalized"
 
 
 @dataclass(frozen=True)

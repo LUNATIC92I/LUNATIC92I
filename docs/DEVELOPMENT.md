@@ -146,14 +146,34 @@ docker compose --profile syslog up -d syslog-collector
 logger -n localhost -P 5514 -d "test message"
 ```
 
-## What's here vs. what's not (Phase 3)
+## Parsing and normalization (Phase 4)
 
-Phases 0–3: architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy, and event ingestion (collectors → EventBus, with dedup,
-rate limiting, and a dead-letter path) are done.
+The `parser` worker consumes `events.raw`, detects the format, extracts
+fields, maps them to OCSF 1.1.0, and publishes to `events.normalized`.
+Supported formats: JSON, syslog (RFC 3164 and 5424), CEF, LEEF, Windows
+Event XML, Apache/Nginx access logs, and generic `key=value`.
 
-Events currently land on the `events.raw` topic and stop there — nothing
-consumes them yet. Parsing and OCSF normalization are Phase 4, OpenSearch
-indexing is Phase 5, and detection is Phase 6. The frontend still shows
-only the Phase 1 placeholder page; SOC screens are Phase 14. See
-`docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.
+```bash
+docker compose up -d parser
+docker compose up -d --scale parser=3 parser   # scales via one consumer group
+```
+
+Detection order matters and is deliberate: a Fortinet event arrives as CEF
+inside a syslog envelope and is also full of `key=value` pairs, so the CEF
+parser must claim it first or the vendor/signature/severity fields a
+detection rule needs are never extracted. See `app/parsers/registry.py`.
+
+Anything no parser can handle is dead-lettered with the reason attached and
+the original bytes intact — it is never stored as an unparsed blob, which
+would be a silent detection gap.
+
+## What's here vs. what's not (Phase 4)
+
+Phases 0–4: architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy, event ingestion, and parsing/OCSF normalization are done.
+
+Normalized events currently land on `events.normalized` and stop there —
+nothing indexes them yet. OpenSearch indexing and enrichment are Phase 5,
+detection is Phase 6. The frontend still shows only the Phase 1 placeholder
+page; SOC screens are Phase 14. See `docs/DEVELOPMENT_PLAN.md` for each
+phase's acceptance criteria.
