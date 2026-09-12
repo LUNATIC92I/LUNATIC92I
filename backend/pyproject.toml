@@ -1,0 +1,64 @@
+[project]
+name = "lunatic-siem-backend"
+version = "0.1.0"
+description = "LUNATIC-IT SIEM backend — API, pipeline workers, detection/correlation/risk engines."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141,<0.142",
+    "uvicorn[standard]>=0.52,<0.53",
+    "pydantic>=2.13,<3.0",
+    "pydantic-settings>=2.15,<3.0",
+    "sqlalchemy>=2.0,<2.1",
+    "alembic>=1.20,<1.21",
+    "asyncpg>=0.31,<0.32",
+    "psycopg2-binary>=2.9,<3.0",  # sync driver used by Alembic migrations only
+    "httpx>=0.28,<0.29",
+    "redis>=8.1,<9.0",
+    "opensearch-py>=3.2,<4.0",
+    "prometheus-client>=0.26,<0.27",
+    "python-json-logger>=4.2,<5.0",
+    "PyYAML>=6.0,<7.0",
+    "argon2-cffi>=25.1,<26.0",
+    "PyJWT>=2.14,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1,<10.0",
+    "pytest-asyncio>=1.4,<2.0",
+    "ruff>=0.16,<0.17",
+    "mypy>=2.3,<3.0",
+    "bandit[toml]>=1.9,<2.0",
+    "pip-audit>=2.10,<3.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
+ignore = ["S101"]  # allow assert in tests
+
+[tool.ruff.lint.per-file-ignores]
+"app/tests/*" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["app/tests/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["app/tests"]
+
+[tool.bandit]
+exclude_dirs = ["app/tests"]
