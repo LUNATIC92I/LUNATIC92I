@@ -12,9 +12,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import model modules here as they are added (Phase 2+) so their tables
-# register on Base.metadata before autogenerate/upgrade runs, e.g.:
-#   from app.models import identity, assets, alerts  # noqa: F401
+import app.models  # noqa: E402,F401  (registers ORM tables on Base.metadata)
+
 target_metadata = Base.metadata
 
 settings = get_settings()

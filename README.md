@@ -11,13 +11,26 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 1 complete — repository & infrastructure scaffolding
+## Status: PHASE 2 complete — authentication, RBAC, multi-tenancy
 
-Phase 0 (architecture/threat model) is validated. Phase 1 delivers the
-repository skeleton, Docker Compose stack, CI pipeline, and Alembic wiring —
-no authentication, ingestion, detection, or real dashboard yet; see
-`docs/DEVELOPMENT_PLAN.md` for what each subsequent phase adds. Quickstart:
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+Phases 0–1 (architecture, repository/infra scaffolding) are done. Phase 2
+adds real, tested identity infrastructure: organization (tenant)
+registration, login/refresh/logout with rotating sessions, TOTP-based MFA,
+Argon2id password hashing, brute-force lockout, the 10-role RBAC catalog
+with a deny-by-default permission matrix, and PostgreSQL Row-Level Security
+(with `FORCE ROW LEVEL SECURITY`) enforcing tenant isolation independently
+of application code. No event ingestion, detection, or real dashboard yet;
+see `docs/DEVELOPMENT_PLAN.md` for what each subsequent phase adds.
+Quickstart: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
+38/38 backend tests passing (unit: password hashing, JWT incl.
+algorithm-confusion rejection, MFA/TOTP, refresh-token mechanics;
+integration against a real PostgreSQL instance: full auth lifecycle,
+brute-force lockout, session rotation/replay resistance, the RBAC matrix
+across all 10 roles, and — the core IDOR claim — a direct test proving RLS
+blocks cross-tenant reads even with no `WHERE tenant_id` filter at all, and
+denies everything when no tenant context is set). Ruff, mypy, Bandit, and
+pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -46,5 +59,4 @@ no authentication, ingestion, detection, or real dashboard yet; see
 
 ## Next step
 
-Phase 2 — Authentication + RBAC + multi-tenancy (see
-`docs/DEVELOPMENT_PLAN.md`).
+Phase 3 — Event ingestion (see `docs/DEVELOPMENT_PLAN.md`).

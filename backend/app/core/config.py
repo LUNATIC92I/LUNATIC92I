@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     jwt_access_token_ttl_seconds: int = 900
     jwt_refresh_token_ttl_seconds: int = 1_209_600
 
+    # Fernet key (cryptography.fernet.Fernet.generate_key()) used for
+    # envelope-encrypting MFA TOTP secrets at rest — never the same value
+    # across environments, never committed.
+    mfa_encryption_key: str = ""
+
+    # Brute-force lockout (THREAT_MODEL.md §3.3).
+    max_failed_login_attempts: int = 5
+    lockout_duration_minutes: int = 15
+
     database_url: str = "postgresql+asyncpg://lunatic:lunatic@localhost:5432/lunatic_siem"
     redis_url: str = "redis://localhost:6379/0"
     opensearch_url: str = "http://localhost:9200"

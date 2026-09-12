@@ -39,6 +39,8 @@ CREATE TABLE users (
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
     mfa_enabled         BOOLEAN NOT NULL DEFAULT FALSE,
     mfa_secret_enc      TEXT,                     -- encrypted at rest via app-level envelope encryption
+    failed_login_attempts SMALLINT NOT NULL DEFAULT 0,  -- added in Phase 2 for lockout (THREAT_MODEL.md §3.3)
+    locked_until        TIMESTAMPTZ,                     -- added in Phase 2, ditto
     last_login_at       TIMESTAMPTZ,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -458,12 +460,27 @@ CREATE INDEX idx_audit_tenant_time ON audit_logs(tenant_id, occurred_at DESC);
 -- =========================================================================
 
 ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alerts FORCE ROW LEVEL SECURITY;  -- also applies to the table-owning app connection
 CREATE POLICY tenant_isolation_alerts ON alerts
-    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
--- The app sets `app.current_tenant_id` (a session-local GUC) from the
--- authenticated principal at the start of every request/transaction, never
--- from client-supplied input. Repeat this ENABLE + POLICY pair for:
--- users, assets, detection_rules, correlation_rules, iocs, incidents,
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+-- current_setting(..., true) (missing_ok) returns NULL instead of erroring
+-- when the GUC isn't set, so a query that forgets to scope a tenant fails
+-- CLOSED (zero rows) rather than raising or, worse, seeing everything.
+-- The app sets `app.current_tenant_id` via set_config(..., is_local=true)
+-- (the parameterized equivalent of SET LOCAL) from the authenticated
+-- principal at the start of every transaction, never from client-supplied
+-- input — see backend/app/core/db.py:tenant_scoped_session (Phase 2).
+-- Repeat this ENABLE + FORCE + POLICY trio for: users, sessions, api_keys,
+-- user_roles, assets, detection_rules, correlation_rules, iocs, incidents,
 -- incident_notes/tasks/timeline, saved_hunts, playbooks, playbook_runs,
--- audit_logs (tenant-scoped rows only; NULL tenant_id = global/shared rows
--- readable per a separate "is_global" policy branch).
+-- audit_logs.
+--
+-- EXCEPTION: `organizations` deliberately gets NO RLS policy. A row in
+-- that table IS a tenant, and resolving which tenant a request belongs to
+-- (at registration, and at login before any JWT/GUC exists) requires
+-- reading it before any tenant scope can be established — RLS there would
+-- make bootstrapping and login impossible, not just inconvenient. Every
+-- endpoint that exposes organization data instead filters explicitly by
+-- the server-derived tenant id (see backend/app/api/organizations.py).
+-- This is a narrow, deliberate exception, not an oversight — see
+-- THREAT_MODEL.md §3.2 and ARCHITECTURE.md §1 row 3 (added Phase 2).
