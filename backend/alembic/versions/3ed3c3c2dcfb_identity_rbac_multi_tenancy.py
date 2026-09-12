@@ -12,14 +12,275 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from alembic import op
-from app.auth.permissions import PERMISSION_CATALOG, ROLE_PERMISSIONS
-from app.models.identity import ROLE_NAMES
 
 # revision identifiers, used by Alembic.
 revision: str = '3ed3c3c2dcfb'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+# NOTE: the RBAC seed data below is a FROZEN SNAPSHOT, deliberately
+# duplicated from app/auth/permissions.py rather than imported from it. A
+# migration must produce the same result forever: if it imported live
+# application code, re-running this migration on a new database years from
+# now would seed a different catalog than it seeded originally, and two
+# environments built from the same migration chain would diverge. Changes to
+# the catalog ship as NEW migrations (see the api_key migration) instead.
+# app/tests/test_rbac_seed.py asserts the database's seeded catalog and the
+# live app/auth/permissions.py stay in agreement, so this duplication cannot
+# drift silently.
+
+# --- FROZEN SEED SNAPSHOT (see module note above) ---------------------------
+_ROLE_NAMES = (
+    "SUPER_ADMIN",
+    "ORG_ADMIN",
+    "SOC_MANAGER",
+    "SOC_ANALYST_L1",
+    "SOC_ANALYST_L2",
+    "SOC_ANALYST_L3",
+    "THREAT_HUNTER",
+    "DFIR_ANALYST",
+    "AUDITOR",
+    "READ_ONLY",
+)
+
+_PERMISSION_CATALOG = (
+    ("user", "read"),
+    ("user", "write"),
+    ("user", "delete"),
+    ("organization", "read"),
+    ("organization", "write"),
+    ("asset", "read"),
+    ("asset", "write"),
+    ("asset", "delete"),
+    ("event", "read"),
+    ("alert", "read"),
+    ("alert", "write"),
+    ("incident", "read"),
+    ("incident", "write"),
+    ("incident", "delete"),
+    ("ioc", "read"),
+    ("ioc", "write"),
+    ("ioc", "delete"),
+    ("rule", "read"),
+    ("rule", "write"),
+    ("rule", "delete"),
+    ("rule", "execute"),
+    ("hunt", "read"),
+    ("hunt", "write"),
+    ("hunt", "execute"),
+    ("mitre", "read"),
+    ("mitre", "write"),
+    ("playbook", "read"),
+    ("playbook", "write"),
+    ("playbook", "execute"),
+    ("playbook", "approve"),
+    ("audit", "read"),
+)
+
+_ROLE_PERMISSIONS = {
+    "SUPER_ADMIN": (
+        ("user", "read"),
+        ("user", "write"),
+        ("user", "delete"),
+        ("organization", "read"),
+        ("organization", "write"),
+        ("asset", "read"),
+        ("asset", "write"),
+        ("asset", "delete"),
+        ("event", "read"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("incident", "delete"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("ioc", "delete"),
+        ("rule", "read"),
+        ("rule", "write"),
+        ("rule", "delete"),
+        ("rule", "execute"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+        ("mitre", "read"),
+        ("mitre", "write"),
+        ("playbook", "read"),
+        ("playbook", "write"),
+        ("playbook", "execute"),
+        ("playbook", "approve"),
+        ("audit", "read"),
+    ),
+    "ORG_ADMIN": (
+        ("user", "read"),
+        ("user", "write"),
+        ("user", "delete"),
+        ("organization", "read"),
+        ("organization", "write"),
+        ("asset", "read"),
+        ("asset", "write"),
+        ("asset", "delete"),
+        ("event", "read"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("incident", "delete"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("ioc", "delete"),
+        ("rule", "read"),
+        ("rule", "write"),
+        ("rule", "delete"),
+        ("rule", "execute"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+        ("mitre", "read"),
+        ("mitre", "write"),
+        ("playbook", "read"),
+        ("playbook", "write"),
+        ("playbook", "execute"),
+        ("playbook", "approve"),
+        ("audit", "read"),
+    ),
+    "SOC_MANAGER": (
+        ("user", "read"),
+        ("user", "write"),
+        ("asset", "read"),
+        ("asset", "write"),
+        ("asset", "delete"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("incident", "delete"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("ioc", "delete"),
+        ("rule", "read"),
+        ("rule", "write"),
+        ("rule", "delete"),
+        ("rule", "execute"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+        ("mitre", "read"),
+        ("mitre", "write"),
+        ("playbook", "read"),
+        ("playbook", "write"),
+        ("playbook", "execute"),
+        ("playbook", "approve"),
+        ("audit", "read"),
+        ("organization", "read"),
+    ),
+    "SOC_ANALYST_L1": (
+        ("asset", "read"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("ioc", "read"),
+        ("event", "read"),
+        ("mitre", "read"),
+        ("hunt", "read"),
+        ("hunt", "execute"),
+    ),
+    "SOC_ANALYST_L2": (
+        ("asset", "read"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("event", "read"),
+        ("mitre", "read"),
+        ("rule", "read"),
+        ("rule", "execute"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+        ("playbook", "read"),
+        ("playbook", "execute"),
+    ),
+    "SOC_ANALYST_L3": (
+        ("asset", "read"),
+        ("asset", "write"),
+        ("alert", "read"),
+        ("alert", "write"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("incident", "delete"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("ioc", "delete"),
+        ("event", "read"),
+        ("mitre", "read"),
+        ("rule", "read"),
+        ("rule", "write"),
+        ("rule", "execute"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+        ("playbook", "read"),
+        ("playbook", "write"),
+        ("playbook", "execute"),
+    ),
+    "THREAT_HUNTER": (
+        ("asset", "read"),
+        ("alert", "read"),
+        ("incident", "read"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("event", "read"),
+        ("mitre", "read"),
+        ("hunt", "read"),
+        ("hunt", "write"),
+        ("hunt", "execute"),
+    ),
+    "DFIR_ANALYST": (
+        ("asset", "read"),
+        ("asset", "write"),
+        ("alert", "read"),
+        ("incident", "read"),
+        ("incident", "write"),
+        ("ioc", "read"),
+        ("ioc", "write"),
+        ("event", "read"),
+        ("mitre", "read"),
+        ("hunt", "read"),
+        ("hunt", "execute"),
+        ("playbook", "read"),
+        ("playbook", "execute"),
+        ("audit", "read"),
+    ),
+    "AUDITOR": (
+        ("user", "read"),
+        ("organization", "read"),
+        ("asset", "read"),
+        ("alert", "read"),
+        ("incident", "read"),
+        ("ioc", "read"),
+        ("rule", "read"),
+        ("playbook", "read"),
+        ("audit", "read"),
+        ("mitre", "read"),
+    ),
+    "READ_ONLY": (
+        ("asset", "read"),
+        ("alert", "read"),
+        ("incident", "read"),
+        ("ioc", "read"),
+        ("event", "read"),
+        ("rule", "read"),
+        ("mitre", "read"),
+        ("hunt", "read"),
+        ("playbook", "read"),
+    ),
+}
+
 
 # Tenant-scoped tables created by this migration — each gets a
 # FORCE ROW LEVEL SECURITY policy as the second isolation layer described in
@@ -139,10 +400,8 @@ def upgrade() -> None:
 
 
 def _seed_rbac_catalog() -> None:
-    """Load the fixed role catalog, the permission catalog, and the default
-    role->permission matrix from app.auth.permissions (single source of
-    truth — see that module's docstring for why importing app code from a
-    migration is acceptable here but not for later migrations)."""
+    """Load the fixed frozen role catalog, permission catalog, and default
+    role->permission matrix defined at the top of this module."""
     roles_table = sa.table(
         "roles", sa.column("id", postgresql.UUID), sa.column("name", sa.String),
         sa.column("description", sa.String),
@@ -156,24 +415,24 @@ def _seed_rbac_catalog() -> None:
         sa.column("permission_id", postgresql.UUID),
     )
 
-    role_ids = {name: uuid.uuid4() for name in ROLE_NAMES}
+    role_ids = {name: uuid.uuid4() for name in _ROLE_NAMES}
     op.bulk_insert(
         roles_table,
-        [{"id": role_ids[name], "name": name, "description": None} for name in ROLE_NAMES],
+        [{"id": role_ids[name], "name": name, "description": None} for name in _ROLE_NAMES],
     )
 
-    permission_ids = {(resource, action): uuid.uuid4() for resource, action in PERMISSION_CATALOG}
+    permission_ids = {(resource, action): uuid.uuid4() for resource, action in _PERMISSION_CATALOG}
     op.bulk_insert(
         permissions_table,
         [
             {"id": permission_ids[(resource, action)], "resource": resource, "action": action}
-            for resource, action in PERMISSION_CATALOG
+            for resource, action in _PERMISSION_CATALOG
         ],
     )
 
     role_permission_rows = [
         {"role_id": role_ids[role_name], "permission_id": permission_ids[perm]}
-        for role_name, perms in ROLE_PERMISSIONS.items()
+        for role_name, perms in _ROLE_PERMISSIONS.items()
         for perm in perms
     ]
     op.bulk_insert(role_permissions_table, role_permission_rows)

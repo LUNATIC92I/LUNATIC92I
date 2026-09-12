@@ -53,15 +53,16 @@ pip-audit             # dependency vulnerability scan
 
 ### Running the test suite
 
-The test suite exercises real PostgreSQL (RLS policies are meaningless
-against SQLite or a mock), so you need a running Postgres and a dedicated
-test database — never point this at your dev database, `_clean_tables`
-truncates it between every test:
+The suite runs against real PostgreSQL and real Redis — RLS policies and
+Redis Streams consumer-group semantics are the things most worth testing,
+and neither survives being mocked. `scripts/dev-services.sh` starts both
+and creates the dedicated test database (never point the suite at your dev
+database: `_clean_tables` truncates between every test):
 
 ```bash
-createdb -O lunatic lunatic_siem_test        # once
-psql lunatic_siem_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto"
+./scripts/dev-services.sh
 
+cd backend
 DATABASE_URL=postgresql+asyncpg://lunatic:<password>@localhost:5432/lunatic_siem_test \
 MFA_ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())") \
 MAX_FAILED_LOGIN_ATTEMPTS=3 \
@@ -70,8 +71,7 @@ pytest -v
 
 `conftest.py` applies every Alembic migration against that database once
 per test session and tears the schema down afterward, so no manual
-migration step is needed beyond having the empty database and the
-`pgcrypto` extension ready.
+migration step is needed.
 
 ### Alembic migrations
 
@@ -117,11 +117,43 @@ curl -s localhost:8000/users/me -H "Authorization: Bearer <access_token>"
 curl -sX POST localhost:8000/auth/refresh -b cookies.txt -c cookies.txt
 ```
 
-## What's here vs. what's not (Phase 2)
+## Trying event ingestion (Phase 3)
 
-Phases 0–2: architecture, repo/infra scaffolding, and authentication/RBAC/
-multi-tenancy are done. There is still no event ingestion, no detection
-logic, no incidents/alerts, and no real dashboard — the frontend still
-shows only the Phase 1 placeholder page (a login UI is a Phase 14
-deliverable, not Phase 2's). See `docs/DEVELOPMENT_PLAN.md` for what each
-subsequent phase adds and its acceptance criteria.
+Mint a collector key (needs `api_key:write`), then push a raw event:
+
+```bash
+curl -sX POST localhost:8000/api-keys -H "Authorization: Bearer <access_token>" \
+  -H 'content-type: application/json' -d '{"name":"edge-forwarder"}'
+# -> {"id": "...", "name": "edge-forwarder", "api_key": "lsk_<tenant>_<secret>"}
+#    The key is shown exactly once; only its hash is stored.
+
+curl -sX POST localhost:8000/ingest/events -H "X-API-Key: lsk_..." \
+  --data-binary '<34>Oct 11 22:14:15 host sshd: Failed password for root'
+# -> {"outcome": "accepted", "message_id": "1739...-0", "reason": null}
+```
+
+Re-sending the identical body returns `{"outcome": "duplicate"}` (retry
+safety), an oversized body returns 202 with `dead_lettered` (preserved on
+`events.raw.deadletter`, never discarded), and exceeding the tenant quota
+returns 429.
+
+The syslog listeners run as a separate worker, off by default because they
+require explicit tenant + allowlist configuration:
+
+```bash
+# set SYSLOG_TENANT_ID and SYSLOG_ALLOWED_SOURCE_CIDRS in .env first
+docker compose --profile syslog up -d syslog-collector
+logger -n localhost -P 5514 -d "test message"
+```
+
+## What's here vs. what's not (Phase 3)
+
+Phases 0–3: architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy, and event ingestion (collectors → EventBus, with dedup,
+rate limiting, and a dead-letter path) are done.
+
+Events currently land on the `events.raw` topic and stop there — nothing
+consumes them yet. Parsing and OCSF normalization are Phase 4, OpenSearch
+indexing is Phase 5, and detection is Phase 6. The frontend still shows
+only the Phase 1 placeholder page; SOC screens are Phase 14. See
+`docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

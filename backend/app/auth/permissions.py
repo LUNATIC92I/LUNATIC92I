@@ -7,11 +7,17 @@ not listed here cannot be granted to any role, and a route that calls
 `require_permission()` with a pair not in PERMISSION_CATALOG is a bug caught
 at migration/seed time, not silently allowed.
 
-NOTE: once this seed data has shipped to any real environment, changes to
-ROLE_PERMISSIONS must land as a *new* Alembic migration, never as an edit to
-the migration that first loaded it — migrations are an immutable history.
-During Phase 2 development (nothing deployed yet) editing here and
-re-generating the seed migration is fine.
+Changing this catalog takes TWO steps, always:
+
+1. edit the constants here (what `require_permission()` enforces at runtime), and
+2. add a NEW Alembic migration inserting the added rows (what the database
+   actually contains).
+
+Never edit an existing migration's seed data: migrations are immutable
+history, and a migration that changed over time would seed different
+catalogs into databases created at different times. `app/tests/
+test_rbac_seed.py` fails the build if this module and the migrated database
+disagree, so forgetting step 2 cannot slip through.
 """
 
 from app.models.identity import ROLE_NAMES
@@ -38,6 +44,9 @@ _RESOURCE_ACTIONS: dict[str, tuple[str, ...]] = {
     "mitre": (READ, WRITE),
     "playbook": (READ, WRITE, EXECUTE, APPROVE),
     "audit": (READ,),
+    # Collector credentials: a key holder can push events into the tenant,
+    # so issuing one is an administrative act, not an analyst action.
+    "api_key": (READ, WRITE, DELETE),
 }
 
 PERMISSION_CATALOG: list[tuple[str, str]] = [
@@ -73,6 +82,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]]] = {
             "playbook": (READ, WRITE, EXECUTE, APPROVE),
             "audit": (READ,),
             "organization": (READ,),
+            "api_key": (READ, WRITE, DELETE),
         }
     ),
     "SOC_ANALYST_L1": _only(
@@ -148,6 +158,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]]] = {
             "playbook": (READ,),
             "audit": (READ,),
             "mitre": (READ,),
+            "api_key": (READ,),
         }
     ),
     "READ_ONLY": _only(

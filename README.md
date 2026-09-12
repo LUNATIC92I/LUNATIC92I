@@ -11,26 +11,29 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 2 complete — authentication, RBAC, multi-tenancy
+## Status: PHASE 3 complete — event ingestion
 
-Phases 0–1 (architecture, repository/infra scaffolding) are done. Phase 2
-adds real, tested identity infrastructure: organization (tenant)
-registration, login/refresh/logout with rotating sessions, TOTP-based MFA,
-Argon2id password hashing, brute-force lockout, the 10-role RBAC catalog
-with a deny-by-default permission matrix, and PostgreSQL Row-Level Security
-(with `FORCE ROW LEVEL SECURITY`) enforcing tenant isolation independently
-of application code. No event ingestion, detection, or real dashboard yet;
-see `docs/DEVELOPMENT_PLAN.md` for what each subsequent phase adds.
-Quickstart: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+Phases 0–2 (architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy) are done. Phase 3 adds the ingestion path: a common
+collector interface with syslog UDP/TCP listeners and a REST gateway, the
+`EventBus` abstraction over Redis Streams (Kafka-swappable, proven by an
+in-memory implementation of the same interface), per-tenant rate limiting,
+retry-safe deduplication, and a dead-letter path so a malformed or
+oversized event is preserved and replayable rather than dropped.
 
-38/38 backend tests passing (unit: password hashing, JWT incl.
-algorithm-confusion rejection, MFA/TOTP, refresh-token mechanics;
-integration against a real PostgreSQL instance: full auth lifecycle,
-brute-force lockout, session rotation/replay resistance, the RBAC matrix
-across all 10 roles, and — the core IDOR claim — a direct test proving RLS
-blocks cross-tenant reads even with no `WHERE tenant_id` filter at all, and
-denies everything when no tenant context is set). Ruff, mypy, Bandit, and
-pip-audit all clean.
+Events currently land on `events.raw` and stop there — parsing/OCSF
+normalization is Phase 4 and detection is Phase 6. The frontend is still
+the Phase 1 placeholder. Quickstart:
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
+72/72 backend tests passing against real PostgreSQL and real Redis. Beyond
+the Phase 2 auth/RBAC/RLS suite, Phase 3 covers: at-least-once redelivery
+of unacked messages, dead-letter routing, syslog allowlist fail-closed
+behavior (an empty allowlist accepts nothing), oversized-datagram and
+endless-TCP-line rejection, real-socket UDP/TCP round trips, retry
+deduplication that is per-tenant rather than global, and collector API keys
+that cannot be forged, replayed against another tenant, or used after
+revocation. Ruff, mypy, Bandit, and pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -59,4 +62,6 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 3 — Event ingestion (see `docs/DEVELOPMENT_PLAN.md`).
+Phase 4 — Normalization: parsers (JSON, syslog, CEF, LEEF, Windows Event
+XML, Apache/Nginx) feeding OCSF 1.1.0 mapping (see
+`docs/DEVELOPMENT_PLAN.md`).

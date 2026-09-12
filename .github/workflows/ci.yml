@@ -48,6 +48,13 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U lunatic -d lunatic_siem_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql+asyncpg://lunatic:ci-test-only-password@localhost:5432/lunatic_siem_test
       JWT_SECRET_KEY: ci-test-only-secret-not-for-production
@@ -55,6 +62,7 @@ jobs:
       # secrets created and destroyed within a single CI run.
       MFA_ENCRYPTION_KEY: BAXh6NR-CnCtWopK3oargngPR5TujRZgroL-3xioUI0=
       MAX_FAILED_LOGIN_ATTEMPTS: "3"
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

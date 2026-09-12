@@ -32,6 +32,19 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     opensearch_url: str = "http://localhost:9200"
 
+    # --- Ingestion (Phase 3) ---
+    ingest_max_payload_bytes: int = 1024 * 1024
+    ingest_rate_limit_per_minute: int = 60_000
+    ingest_dedup_ttl_seconds: int = 3600
+
+    # Syslog collector worker. Both are required to start that worker: an
+    # unauthenticated transport must be pinned to one tenant and an explicit
+    # source allowlist (THREAT_MODEL.md §3.1).
+    syslog_tenant_id: str = ""
+    syslog_allowed_source_cidrs: str = ""
+    syslog_udp_port: int = 5514
+    syslog_tcp_port: int = 5515
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
