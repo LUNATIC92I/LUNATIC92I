@@ -229,3 +229,25 @@ egress_requests_blocked_total = Counter(
     ),
     ["reason"],
 )
+
+alerts_created_total = Counter(
+    "alerts_created_total",
+    "Alerts raised for an analyst to work",
+    ["source", "severity"],
+)
+
+alerts_deduplicated_total = Counter(
+    "alerts_deduplicated_total",
+    (
+        "Detections folded into an existing open alert instead of raising a "
+        "new one. The gap between this and alerts_created_total is how much "
+        "noise deduplication is absorbing."
+    ),
+    ["source"],
+)
+
+alert_transitions_total = Counter(
+    "alert_transitions_total",
+    "Alert status changes, by the status moved to",
+    ["to_status"],
+)

@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     )
     mitre_catalog_max_age_days: int = 90
 
+    # --- Alerts (Phase 11) ---
+    # How long a repeat of the same thing folds into the open alert instead
+    # of raising a new one.
+    alert_dedup_window_minutes: int = 60
+    # Detections below this risk score are recorded and searchable but do
+    # not become an analyst's task. Where that line sits is a SOC staffing
+    # decision, so it is configuration, not a constant.
+    alert_min_risk_score: int = 0
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"

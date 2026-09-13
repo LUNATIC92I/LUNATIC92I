@@ -368,18 +368,48 @@ runs two consumers — events and detections — in one process. That is what
 makes the per-technique counts real; without it the coverage page could only
 say what rules *claim* to cover.
 
-## What's here vs. what's not (Phase 10)
+## Alerts (Phase 11)
 
-Phases 0–10 are done: architecture, repo/infra scaffolding,
+The `alerting` worker turns detections and correlations into the queue an
+analyst works:
+
+```bash
+docker compose up -d alerting
+
+curl -s "localhost:8000/alerts?status=NEW" -H "Authorization: Bearer <token>"
+curl -sX POST localhost:8000/alerts/<id>/status -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{"status":"IN_PROGRESS"}'
+curl -s localhost:8000/alerts/<id>/evidence -H "Authorization: Bearer <token>"
+```
+
+Three behaviours worth knowing before changing anything here:
+
+- **The state machine is data** (`TRANSITIONS` in `app/services/alerts.py`).
+  Add a status there or nowhere; the API returns 409 for anything the
+  machine refuses.
+- **Closing needs `alert:close`, triaging needs `alert:write`.** That is the
+  L1/L2 split, and it is checked against the *target* status, so it cannot
+  be bypassed by choosing a different endpoint.
+- **Repeats fold into the open alert** within `ALERT_DEDUP_WINDOW_MINUTES`.
+  If you are testing alert creation and only see one alert, check
+  `occurrence_count` before assuming something was dropped.
+
+## What's here vs. what's not (Phase 11)
+
+Phases 0–11 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
 the OpenSearch event store with enrichment, the detection engine,
-correlation, risk scoring, threat intelligence, and ATT&CK coverage. The pipeline runs end to end — a syslog line or REST payload
+correlation, risk scoring, threat intelligence, ATT&CK coverage, and
+alerts. The pipeline runs end to end — a syslog line or REST payload
 becomes an enriched, searchable, tenant-isolated document; a rule match
 becomes a detection on `detections.created`; and a sequence of those becomes
 a correlation with a timeline on `correlations.created`.
 
-Everything is enriched, scored, correlated and mapped to ATT&CK — but
-nothing yet becomes an alert an analyst works. That is Phase 11, and
-incidents are Phase 12. The frontend still shows only the Phase 1
+An analyst now has a queue to work, but no case to work it in: incidents
+(Phase 12) are what group related alerts, hold tasks and a timeline, and
+carry an investigation to a conclusion. Notifications are not implemented
+either — `alerts.created` is published and is the hook they attach to. The
+frontend still shows only the Phase 1 placeholder page; SOC screens are
+Phase 14. The frontend still shows only the Phase 1
 placeholder page; SOC screens are Phase 14. See
 `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

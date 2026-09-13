@@ -27,6 +27,11 @@ WRITE = "write"
 DELETE = "delete"
 EXECUTE = "execute"
 APPROVE = "approve"
+# Ending analyst work on an alert (resolve / false positive / close) is a
+# separate action from triaging it, which is what makes the L1/L2 tier
+# distinction real rather than a label: an L1 can pick an alert up and
+# escalate it, only L2 and above can decide it is over (spec §13).
+CLOSE = "close"
 
 # (resource, [allowed actions]) — resources match the spec §22 API groups
 # that exist or are planned; actions are only the ones meaningful for that
@@ -36,7 +41,7 @@ _RESOURCE_ACTIONS: dict[str, tuple[str, ...]] = {
     "organization": (READ, WRITE),
     "asset": (READ, WRITE, DELETE),
     "event": (READ,),
-    "alert": (READ, WRITE),
+    "alert": (READ, WRITE, CLOSE),
     "incident": (READ, WRITE, DELETE),
     "ioc": (READ, WRITE, DELETE),
     "rule": (READ, WRITE, DELETE, EXECUTE),
@@ -73,7 +78,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]]] = {
         {
             "user": (READ, WRITE),
             "asset": (READ, WRITE, DELETE),
-            "alert": (READ, WRITE),
+            "alert": (READ, WRITE, CLOSE),
             "incident": (READ, WRITE, DELETE),
             "ioc": (READ, WRITE, DELETE),
             "rule": (READ, WRITE, DELETE, EXECUTE),
@@ -99,7 +104,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]]] = {
     "SOC_ANALYST_L2": _only(
         {
             "asset": (READ,),
-            "alert": (READ, WRITE),
+            "alert": (READ, WRITE, CLOSE),
             "incident": (READ, WRITE),
             "ioc": (READ, WRITE),
             "event": (READ,),
@@ -112,7 +117,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]]] = {
     "SOC_ANALYST_L3": _only(
         {
             "asset": (READ, WRITE),
-            "alert": (READ, WRITE),
+            "alert": (READ, WRITE, CLOSE),
             "incident": (READ, WRITE, DELETE),
             "ioc": (READ, WRITE, DELETE),
             "event": (READ,),

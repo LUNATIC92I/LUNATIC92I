@@ -11,33 +11,35 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 10 complete — MITRE ATT&CK coverage
+## Status: PHASE 11 complete — Alerts
 
-Phases 0–9 are done (architecture, scaffolding, auth/RBAC/multi-tenancy,
+Phases 0–10 are done (architecture, scaffolding, auth/RBAC/multi-tenancy,
 ingestion, OCSF normalization, event store, detection, correlation, risk
-scoring, threat intelligence). Phase 10 answers the question a SOC manager
-actually asks: *what can we detect, and what can we not?*
+scoring, threat intelligence, ATT&CK coverage). Phase 11 turns machine
+output into human work: detections and correlations become alerts with a
+real lifecycle (NEW → IN_PROGRESS → ESCALATED → FALSE_POSITIVE/RESOLVED →
+CLOSED), deduplication on a `dedup_key`, and evidence that resolves back to
+the documents the alert was raised on. Full reference:
+[`docs/ALERTS.md`](docs/ALERTS.md).
 
-The ATT&CK catalog is **imported, never hardcoded** — the official STIX
-bundle (verified against the real v19.2 release: 15 tactics, 858 techniques,
-zero rejected objects) over HTTPS through the egress guard, or from a file
-for air-gapped installs, re-imported automatically once stale. Imports are
-idempotent, audit-logged, and validate third-party content before storing
-it: bounded sizes, shape-checked ids, stripped control characters, rejected
-objects counted rather than silently dropped.
+The analyst-tier distinction is enforced by a new `alert:close` permission
+rather than written on an org chart: an L1 can acknowledge, escalate,
+assign and annotate, but only L2 and above can decide an alert is over.
+Every status change writes an audit entry and an append-only transition row
+in the same transaction as the change, and closures are audited per outcome
+— "who called this a false positive, and when" is the first question after a
+missed incident.
 
-Coverage is deliberately conservative, because the alternative is a page
-that flatters: a disabled rule is not coverage, a covered sub-technique does
-not cover its parent (it is reported as `partial`), revoked techniques are
-out of the denominator, and a rule claiming a technique the catalog lacks is
-surfaced as an unknown claim rather than counted. Detections are now indexed
-as well as published, so "detections per technique" and "recent detections"
-come from real data — with dry-run detections excluded, since a `testing`
-rule fires deliberately and never alerts. Full reference:
-[`docs/MITRE_MAPPING.md`](docs/MITRE_MAPPING.md).
+Deduplication folds repeats into the alert they repeat (sixty brute-force
+firings against one account are one alert with sixty occurrences), keeps the
+worst severity and score seen in the episode so an escalating attack is not
+hidden behind the milder firing that opened it, and publishes only genuinely
+new alerts — a fifty-first occurrence must not page anyone.
 
-543/543 backend tests passing against real PostgreSQL, real Redis and a real
-OpenSearch cluster with the security plugin enabled. Ruff, mypy, Bandit and
+611/611 backend tests passing against real PostgreSQL, real Redis and a real
+OpenSearch cluster with the security plugin enabled, including the full
+valid/invalid transition matrix, dedup window behaviour, and evidence
+lineage proven against real indexed documents. Ruff, mypy, Bandit and
 pip-audit all clean.
 
 ## Phase 0 deliverables
@@ -67,7 +69,7 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 11 — Alerts: the full lifecycle (NEW → IN_PROGRESS → ESCALATED →
-FALSE_POSITIVE/RESOLVED → CLOSED), deduplication and suppression on a
-`dedup_key`, and evidence linkage back to the OpenSearch documents behind
-every alert.
+Phase 12 — Incident Management: the `NEW → TRIAGE → INVESTIGATION →
+CONTAINMENT → ERADICATION → RECOVERY → CLOSED` workflow, `INC-YYYY-NNNNNN`
+display ids, notes, tasks, timeline, and evidence/asset/user/IOC linkage —
+the case an alert gets promoted into.
