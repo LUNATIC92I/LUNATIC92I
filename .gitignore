@@ -27,6 +27,10 @@ frontend/.vite/
 *.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
 yarn-error.log*
 
 # Docker / data volumes

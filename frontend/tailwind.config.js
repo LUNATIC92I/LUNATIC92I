@@ -16,6 +16,17 @@ export default {
           high: "#f57c42",
           critical: "#ef4444",
         },
+        // Status colors (dataviz skill's fixed reference palette, validated
+        // against a dark surface) — reserved for state, never reused as a
+        // categorical series color. Used by the MITRE coverage matrix
+        // (covered/partial/uncovered) and anywhere else "is this okay?" is
+        // the question, as distinct from `severity` (how bad is this alert).
+        status: {
+          good: "#0ca30c",
+          warning: "#fab219",
+          serious: "#ec835a",
+          critical: "#d03b3b",
+        },
       },
     },
   },

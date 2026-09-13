@@ -95,6 +95,12 @@ npm run dev          # http://localhost:5173, proxies to VITE_API_BASE_URL
 npm run lint
 npm run typecheck
 npm run build
+npm run test         # vitest: component/unit tests, no servers required
+
+# E2E (Playwright): needs the backend AND `npm run dev` already running
+# against a disposable database (see scripts/dev-services.sh) — it hits
+# the real API, not a mock, and does not start either server for you.
+npm run e2e
 ```
 
 ## Trying the auth API (Phase 2)

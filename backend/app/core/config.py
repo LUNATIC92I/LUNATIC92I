@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     env: str = "development"
     log_level: str = "INFO"
 
+    # The frontend authenticates with an httpOnly refresh cookie
+    # (app/api/auth.py), so its origin must be named explicitly — a
+    # wildcard (`*`) is rejected by browsers for credentialed requests
+    # anyway, and would be a much wider CORS hole than this API needs.
+    # Comma-separated; empty means no browser origin is allowed (fail
+    # closed, like the egress guard).
+    cors_allowed_origins: str = ""
+
     backend_port: int = 8000
 
     jwt_secret_key: str = ""

@@ -1,26 +1,31 @@
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.auth.dependencies import AuthContext, get_auth_context, require_permission
-from app.models.identity import Role, User, UserRole
+from app.models.identity import ROLE_NAMES, User
 from app.schemas.auth import MeResponse
-from app.schemas.users import UserPublic
+from app.schemas.users import RoleCatalogResponse, UserCreate, UserPublic, UserUpdate
+from app.services import users as service
 
 router = APIRouter(tags=["users"])
 
 
-async def _roles_for_user(ctx: AuthContext, user_id: str) -> list[str]:
-    stmt = (
-        select(Role.name)
-        .join(UserRole, UserRole.role_id == Role.id)
-        .where(UserRole.user_id == user_id)
-    )
-    return [name for (name,) in (await ctx.db.execute(stmt)).all()]
+def _client_ip(request: Request) -> str | None:
+    return request.client.host if request.client else None
+
+
+def _user_uuid(user_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(user_id)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "user not found") from exc
 
 
 @router.get("/users/me", response_model=MeResponse)
 async def get_me(ctx: AuthContext = Depends(get_auth_context)) -> MeResponse:
-    roles = await _roles_for_user(ctx, str(ctx.user.id))
+    roles = await service.roles_for(ctx.db, ctx.user.id)
     return MeResponse(
         id=str(ctx.user.id),
         email=ctx.user.email,
@@ -29,6 +34,13 @@ async def get_me(ctx: AuthContext = Depends(get_auth_context)) -> MeResponse:
         roles=roles,
         permissions=[f"{resource}:{action}" for resource, action in sorted(ctx.user.permissions)],
     )
+
+
+@router.get("/users/roles", response_model=RoleCatalogResponse)
+async def list_role_catalog(
+    ctx: AuthContext = Depends(require_permission("user", "read")),
+) -> RoleCatalogResponse:
+    return RoleCatalogResponse(roles=list(ROLE_NAMES))
 
 
 @router.get("/users", response_model=list[UserPublic])
@@ -46,7 +58,7 @@ async def list_users(
 
     result = []
     for user in users:
-        roles = await _roles_for_user(ctx, str(user.id))
+        roles = await service.roles_for(ctx.db, user.id)
         result.append(
             UserPublic(
                 id=str(user.id),
@@ -58,3 +70,67 @@ async def list_users(
             )
         )
     return result
+
+
+@router.post("/users", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    payload: UserCreate,
+    request: Request,
+    ctx: AuthContext = Depends(require_permission("user", "write")),
+) -> UserPublic:
+    try:
+        user, roles = await service.create_user(
+            ctx.db,
+            tenant_id=ctx.user.tenant_id,
+            email=payload.email,
+            full_name=payload.full_name,
+            password=payload.password,
+            role=payload.role,
+            actor_id=ctx.user.id,
+            actor_ip=_client_ip(request),
+        )
+    except service.DuplicateEmail as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "a user with this email already exists"
+        ) from exc
+    await ctx.db.commit()
+    return UserPublic(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        mfa_enabled=user.mfa_enabled,
+        roles=roles,
+    )
+
+
+@router.patch("/users/{user_id}", response_model=UserPublic)
+async def update_user(
+    user_id: str,
+    payload: UserUpdate,
+    request: Request,
+    ctx: AuthContext = Depends(require_permission("user", "write")),
+) -> UserPublic:
+    if payload.is_active is None and payload.role is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "nothing to update")
+    try:
+        user, roles = await service.update_user(
+            ctx.db,
+            tenant_id=ctx.user.tenant_id,
+            user_id=_user_uuid(user_id),
+            is_active=payload.is_active,
+            role=payload.role,
+            actor_id=ctx.user.id,
+            actor_ip=_client_ip(request),
+        )
+    except service.UserNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "user not found") from exc
+    await ctx.db.commit()
+    return UserPublic(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        mfa_enabled=user.mfa_enabled,
+        roles=roles,
+    )

@@ -2,10 +2,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
 from app.api.alerts import router as alerts_router
 from app.api.assets import router as assets_router
+from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.hunting import router as hunting_router
@@ -38,6 +40,18 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if not settings.is_production else None,
     )
 
+    allowed_origins = [
+        origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()
+    ]
+    if allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)
@@ -50,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router)
     app.include_router(incidents_router)
     app.include_router(hunting_router)
+    app.include_router(audit_router)
 
     @app.middleware("http")
     async def track_requests(request, call_next):  # type: ignore[no-untyped-def]

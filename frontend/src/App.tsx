@@ -1,50 +1,58 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppShell } from "@/components/AppShell";
+import LoginPage from "@/pages/LoginPage";
+import SocOverviewPage from "@/pages/SocOverviewPage";
+import AlertsPage from "@/pages/AlertsPage";
+import AlertDetailPage from "@/pages/AlertDetailPage";
+import IncidentsPage from "@/pages/IncidentsPage";
+import IncidentDetailPage from "@/pages/IncidentDetailPage";
+import EventExplorerPage from "@/pages/EventExplorerPage";
+import ThreatHuntingPage from "@/pages/ThreatHuntingPage";
+import MitrePage from "@/pages/MitrePage";
+import ThreatIntelPage from "@/pages/ThreatIntelPage";
+import AssetsPage from "@/pages/AssetsPage";
+import UsersPage from "@/pages/UsersPage";
+import RulesPage from "@/pages/RulesPage";
+import PlaybooksPage from "@/pages/PlaybooksPage";
+import ReportsPage from "@/pages/ReportsPage";
+import AuditPage from "@/pages/AuditPage";
+import AdministrationPage from "@/pages/AdministrationPage";
 
-type BackendStatus = "checking" | "online" | "offline";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-
-/**
- * Phase 1 placeholder. This is intentionally NOT a dashboard — no charts, no
- * mock metrics. It exists only to prove the frontend/backend/Docker wiring
- * works end to end. The real SOC screens (spec §23) are built from Phase 14
- * onward, against real APIs.
- */
 export default function App() {
-  const [status, setStatus] = useState<BackendStatus>("checking");
-
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/health`)
-      .then((res) => setStatus(res.ok ? "online" : "offline"))
-      .catch(() => setStatus("offline"));
-  }, []);
-
   return (
-    <main className="min-h-screen bg-surface text-slate-100 flex items-center justify-center p-6">
-      <div className="max-w-lg w-full bg-surface-raised rounded-lg border border-slate-800 p-8 space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">LUNATIC-IT SIEM</h1>
-        <p className="text-slate-400">Detect. Investigate. Respond.</p>
-        <div className="pt-2 border-t border-slate-800">
-          <p className="text-sm text-slate-400">
-            Phase 1 — repository &amp; infrastructure scaffold. No SOC features
-            implemented yet; see <code>docs/DEVELOPMENT_PLAN.md</code>.
-          </p>
-          <p className="mt-3 text-sm">
-            Backend API:{" "}
-            <span
-              className={
-                status === "online"
-                  ? "text-emerald-400"
-                  : status === "offline"
-                    ? "text-severity-critical"
-                    : "text-slate-500"
-              }
-            >
-              {status}
-            </span>
-          </p>
-        </div>
-      </div>
-    </main>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<SocOverviewPage />} />
+            <Route path="alerts" element={<AlertsPage />} />
+            <Route path="alerts/:alertId" element={<AlertDetailPage />} />
+            <Route path="incidents" element={<IncidentsPage />} />
+            <Route path="incidents/:incidentId" element={<IncidentDetailPage />} />
+            <Route path="events" element={<EventExplorerPage />} />
+            <Route path="hunting" element={<ThreatHuntingPage />} />
+            <Route path="mitre" element={<MitrePage />} />
+            <Route path="threat-intel" element={<ThreatIntelPage />} />
+            <Route path="assets" element={<AssetsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="rules" element={<RulesPage />} />
+            <Route path="playbooks" element={<PlaybooksPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="audit" element={<AuditPage />} />
+            <Route path="administration" element={<AdministrationPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

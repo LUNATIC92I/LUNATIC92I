@@ -18,6 +18,7 @@ os.environ.setdefault("OPENSEARCH_USERNAME", "admin")
 os.environ.setdefault("OPENSEARCH_PASSWORD", "LunaticDev-Test-1!")
 # Local clusters use the self-signed demo certificates.
 os.environ.setdefault("OPENSEARCH_VERIFY_CERTS", "false")
+os.environ.setdefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
