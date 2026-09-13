@@ -24,6 +24,17 @@ from app.models.identity import (  # noqa: F401
     User,
     UserRole,
 )
+from app.models.incidents import (  # noqa: F401
+    Incident,
+    IncidentAlert,
+    IncidentAsset,
+    IncidentIoc,
+    IncidentNote,
+    IncidentSequence,
+    IncidentTask,
+    IncidentTimeline,
+    IncidentUser,
+)
 from app.models.mitre import (  # noqa: F401
     MitreImport,
     MitreTactic,

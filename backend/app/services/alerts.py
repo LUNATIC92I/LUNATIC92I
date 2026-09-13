@@ -28,6 +28,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
@@ -113,30 +114,31 @@ class AlertInput:
 async def next_display_id(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     """ALT-2026-000123, unique and gapless per tenant per year.
 
-    The counter row is locked for the duration of the transaction, because
-    two workers creating alerts at the same instant would otherwise both
-    read the same maximum and produce the same id.
+    Creating the counter row and locking it are two different problems, and
+    conflating them is exactly what breaks under real concurrency: a plain
+    "SELECT ... FOR UPDATE, and INSERT if it's missing" locks nothing on the
+    first alert of a tenant's year, because there is no row yet for FOR
+    UPDATE to hold — so N concurrent creators all see no row, all try to
+    INSERT, and all but one fail with a unique-constraint violation. The fix
+    is to make row creation itself the atomic, contended step: `INSERT ...
+    ON CONFLICT DO NOTHING` either creates the row or (harmlessly) no-ops if
+    another transaction just did, and only then do we SELECT ... FOR UPDATE
+    a row that is now guaranteed to exist, which is what actually
+    serializes the increment.
     """
     year = datetime.now(UTC).year
+    await db.execute(
+        insert(AlertSequence)
+        .values(tenant_id=tenant_id, year=year, last_number=0)
+        .on_conflict_do_nothing(index_elements=["tenant_id", "year"])
+    )
     row = (
         await db.execute(
             select(AlertSequence)
             .where(AlertSequence.tenant_id == tenant_id, AlertSequence.year == year)
             .with_for_update()
         )
-    ).scalar_one_or_none()
-
-    if row is None:
-        row = AlertSequence(tenant_id=tenant_id, year=year, last_number=0)
-        db.add(row)
-        await db.flush()
-        row = (
-            await db.execute(
-                select(AlertSequence)
-                .where(AlertSequence.tenant_id == tenant_id, AlertSequence.year == year)
-                .with_for_update()
-            )
-        ).scalar_one()
+    ).scalar_one()
 
     row.last_number += 1
     return f"ALT-{year}-{row.last_number:06d}"

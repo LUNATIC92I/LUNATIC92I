@@ -394,22 +394,56 @@ Three behaviours worth knowing before changing anything here:
   If you are testing alert creation and only see one alert, check
   `occurrence_count` before assuming something was dropped.
 
-## What's here vs. what's not (Phase 11)
+## Incident management (Phase 12)
 
-Phases 0–11 are done: architecture, repo/infra scaffolding,
+Cases are analyst-driven — there is no worker for this phase, unlike every
+pipeline stage before it. Promoting alerts into a case, moving it through
+the workflow, and linking evidence are all things a human decides to do:
+
+```bash
+# open a case, promoting alerts already in hand
+curl -sX POST localhost:8000/incidents -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' \
+  -d '{"title":"Suspected account takeover","severity":"critical","alert_ids":["<alert-id>"]}'
+
+curl -sX POST localhost:8000/incidents/<id>/status -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{"status":"TRIAGE"}'
+
+curl -s localhost:8000/incidents/<id>/timeline -H "Authorization: Bearer <token>"
+curl -s localhost:8000/incidents/<id>/evidence -H "Authorization: Bearer <token>"
+```
+
+Two things worth knowing before touching this area:
+
+- **The workflow is data** (`TRANSITIONS` in `app/services/incidents.py`),
+  same pattern as alerts. A 409 means the machine refused the move, not a
+  bug.
+- **Evidence is never stored on the incident.** `GET .../evidence` resolves
+  the union of every event id cited by every *linked alert*, live, each
+  time it is called — link a new alert and its evidence is part of the
+  case with nothing to copy or keep in sync.
+
+If you are adding a new kind of mutation to incidents, route it through
+`app/services/incidents.py` and make sure it calls `record_timeline()` —
+that is the one thing every existing test in `test_incidents.py` checks for,
+and the acceptance criterion ("every state change produces a timeline
+entry") depends on nothing bypassing it.
+
+## What's here vs. what's not (Phase 12)
+
+Phases 0–12 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
 the OpenSearch event store with enrichment, the detection engine,
-correlation, risk scoring, threat intelligence, ATT&CK coverage, and
-alerts. The pipeline runs end to end — a syslog line or REST payload
-becomes an enriched, searchable, tenant-isolated document; a rule match
-becomes a detection on `detections.created`; and a sequence of those becomes
-a correlation with a timeline on `correlations.created`.
+correlation, risk scoring, threat intelligence, ATT&CK coverage, alerts,
+and incident management. The pipeline runs end to end — a syslog line or
+REST payload becomes an enriched, searchable, tenant-isolated document; a
+rule match becomes a detection; a sequence of those becomes a correlation;
+either becomes an alert; and an analyst can promote one or more alerts into
+a worked incident with its own lifecycle, tasks, and timeline.
 
-An analyst now has a queue to work, but no case to work it in: incidents
-(Phase 12) are what group related alerts, hold tasks and a timeline, and
-carry an investigation to a conclusion. Notifications are not implemented
-either — `alerts.created` is published and is the hook they attach to. The
-frontend still shows only the Phase 1 placeholder page; SOC screens are
-Phase 14. The frontend still shows only the Phase 1
-placeholder page; SOC screens are Phase 14. See
-`docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.
+Nothing yet lets an analyst *search* the event store directly — hunting
+(Phase 13) is the free-text/filtered query API and pivot set. Notifications
+are still not implemented; `alerts.created` remains the hook they will
+attach to. The frontend still shows only the Phase 1 placeholder page; SOC
+screens are Phase 14. See `docs/DEVELOPMENT_PLAN.md` for each phase's
+acceptance criteria.

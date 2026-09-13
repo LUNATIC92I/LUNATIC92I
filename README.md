@@ -11,36 +11,38 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 11 complete — Alerts
+## Status: PHASE 12 complete — Incident Management
 
-Phases 0–10 are done (architecture, scaffolding, auth/RBAC/multi-tenancy,
+Phases 0–11 are done (architecture, scaffolding, auth/RBAC/multi-tenancy,
 ingestion, OCSF normalization, event store, detection, correlation, risk
-scoring, threat intelligence, ATT&CK coverage). Phase 11 turns machine
-output into human work: detections and correlations become alerts with a
-real lifecycle (NEW → IN_PROGRESS → ESCALATED → FALSE_POSITIVE/RESOLVED →
-CLOSED), deduplication on a `dedup_key`, and evidence that resolves back to
-the documents the alert was raised on. Full reference:
-[`docs/ALERTS.md`](docs/ALERTS.md).
+scoring, threat intelligence, ATT&CK coverage, alerts). Phase 12 gives an
+analyst a case to work in: the full NIST-800-61-shaped incident lifecycle
+(NEW → TRIAGE → INVESTIGATION → CONTAINMENT → ERADICATION → RECOVERY →
+CLOSED), `INC-YYYY-NNNNNN` display ids, notes, tasks, a chronological
+timeline, and linkage to the alerts/assets/indicators/accounts the case is
+about. Full reference: [`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md).
 
-The analyst-tier distinction is enforced by a new `alert:close` permission
-rather than written on an org chart: an L1 can acknowledge, escalate,
-assign and annotate, but only L2 and above can decide an alert is over.
-Every status change writes an audit entry and an append-only transition row
-in the same transaction as the change, and closures are audited per outcome
-— "who called this a false positive, and when" is the first question after a
-missed incident.
+This phase's own test suite caught two real concurrency/ordering defects
+and both are fixed, one of them also in already-shipped Phase 11 code:
 
-Deduplication folds repeats into the alert they repeat (sixty brute-force
-firings against one account are one alert with sixty occurrences), keeps the
-worst severity and score seen in the episode so an escalating attack is not
-hidden behind the milder firing that opened it, and publishes only genuinely
-new alerts — a fifty-first occurrence must not page anyone.
+- **Display-id generation raced under concurrency.** `SELECT ... FOR
+  UPDATE` locks nothing when the counter row doesn't exist yet, so N
+  concurrent case (or alert) creators all saw no row and raced to insert
+  one — all but the winner failed outright. Fixed with `INSERT ... ON
+  CONFLICT DO NOTHING` before the locking `SELECT` in both `alerts.py` and
+  `incidents.py`.
+- **Timeline entries written in one transaction could read back in a
+  random order.** Postgres's `now()` is frozen at transaction start, not
+  evaluated per statement, so several entries in one transaction shared an
+  identical timestamp and tie-broke on a random row id.
+  `incident_timeline.occurred_at` now uses `clock_timestamp()`, which
+  advances within a transaction.
 
-611/611 backend tests passing against real PostgreSQL, real Redis and a real
-OpenSearch cluster with the security plugin enabled, including the full
-valid/invalid transition matrix, dedup window behaviour, and evidence
-lineage proven against real indexed documents. Ruff, mypy, Bandit and
-pip-audit all clean.
+677/677 backend tests passing against real PostgreSQL, real Redis and a
+real OpenSearch cluster with the security plugin enabled, including the
+full workflow transition matrix, concurrent-creation stress tests, timeline-
+completeness checks, and the cross-tenant IDOR suite spec §12 extends from
+Phase 2 to incidents. Ruff, mypy, Bandit and pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -69,7 +71,8 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 12 — Incident Management: the `NEW → TRIAGE → INVESTIGATION →
-CONTAINMENT → ERADICATION → RECOVERY → CLOSED` workflow, `INC-YYYY-NNNNNN`
-display ids, notes, tasks, timeline, and evidence/asset/user/IOC linkage —
-the case an alert gets promoted into.
+Phase 13 — Threat Hunting: free-text and filtered search over
+`events-normalized-*` (IP/user/hostname/process/hash/domain/event
+type/severity/MITRE technique), saved queries, export, and the pivot set
+from spec §15 (IP → Events, IP → Users, User → Hosts, Host → Processes,
+Hash → Events, Domain → Events, User → Timeline).

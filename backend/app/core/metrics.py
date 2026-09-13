@@ -251,3 +251,15 @@ alert_transitions_total = Counter(
     "Alert status changes, by the status moved to",
     ["to_status"],
 )
+
+incidents_created_total = Counter(
+    "incidents_created_total",
+    "Incidents opened",
+    ["severity"],
+)
+
+incident_transitions_total = Counter(
+    "incident_transitions_total",
+    "Incident workflow transitions, by the state moved to",
+    ["to_status"],
+)
