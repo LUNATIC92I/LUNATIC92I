@@ -49,7 +49,7 @@ _TEXTUAL_TYPES = frozenset({"keyword", "text"})
 
 
 @lru_cache(maxsize=1)
-def _non_textual_fields() -> frozenset[str]:
+def non_textual_fields() -> frozenset[str]:
     from app.services.index_management import normalized_mapping
 
     found: set[str] = set()
@@ -66,8 +66,15 @@ def _non_textual_fields() -> frozenset[str]:
     return frozenset(found)
 
 
-def _case_insensitive(field: str, requested: bool) -> bool:
-    return requested and field not in _non_textual_fields()
+def case_insensitive_allowed(field: str, requested: bool) -> bool:
+    """Whether a case-insensitive comparison is legal for `field`.
+
+    OpenSearch rejects `case_insensitive` outright on non-textual field
+    types (`ip`, numeric, boolean, date) — it is a text concept, and a
+    query asking for it on an `ip` field 400s rather than being ignored.
+    Shared with `app.hunting.pivots`, which hits the exact same fields.
+    """
+    return requested and field not in non_textual_fields()
 
 
 _NEGATIVE_OPERATORS = {
@@ -98,7 +105,7 @@ def _text(value: Any) -> str:
 def _positive_clause(condition: Condition) -> dict[str, Any]:
     field = condition.field_path
     value = condition.value
-    insensitive = _case_insensitive(field, not condition.case_sensitive)
+    insensitive = case_insensitive_allowed(field, not condition.case_sensitive)
 
     match condition.operator:
         case Operator.EQUALS:

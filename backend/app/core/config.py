@@ -114,6 +114,15 @@ class Settings(BaseSettings):
     # decision, so it is configuration, not a constant.
     alert_min_risk_score: int = 0
 
+    # --- Threat hunting (Phase 13) ---
+    # A hunt search/pivot result set an analyst can page through is one
+    # thing; a bulk export is a different risk (THREAT_MODEL.md §3.7: data
+    # exfiltration via a legitimate feature). Both are capped, and exports
+    # are additionally rate-limited and audit-logged (EXPORT_DATA).
+    hunt_search_max_results: int = 1000
+    hunt_export_max_rows: int = 10_000
+    hunt_export_rate_limit_per_hour: int = 20
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"

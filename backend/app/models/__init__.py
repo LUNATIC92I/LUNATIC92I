@@ -14,6 +14,7 @@ from app.models.detection import (  # noqa: F401
     DetectionRuleVersion,
     RuleExceptionRecord,
 )
+from app.models.hunting import SavedHunt  # noqa: F401
 from app.models.identity import (  # noqa: F401
     ApiKey,
     Organization,
