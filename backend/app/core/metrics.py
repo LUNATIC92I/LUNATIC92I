@@ -196,3 +196,9 @@ correlation_latency_seconds = Histogram(
     "correlation_latency_seconds",
     "Time to evaluate one input against the full correlation rule set",
 )
+
+risk_scores_total = Counter(
+    "risk_scores_total",
+    "Risk assessments computed, by bucket",
+    ["bucket"],
+)

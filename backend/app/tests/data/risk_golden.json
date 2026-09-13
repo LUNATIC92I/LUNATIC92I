@@ -1,0 +1,347 @@
+{
+  "fully_populated_critical": {
+    "score": 93,
+    "bucket": "CRITICAL",
+    "formula_version": "risk-v1",
+    "weights_fingerprint": "40163da1a051d7cf",
+    "available_weight": 100.0,
+    "denominator": 100.0,
+    "total_weight": 100.0,
+    "factors": [
+      {
+        "factor": "severity",
+        "value": 1.0,
+        "weight": 30.0,
+        "points": 30.0,
+        "available": true,
+        "reason": "rule severity is critical",
+        "inputs": {
+          "severity": "critical"
+        }
+      },
+      {
+        "factor": "confidence",
+        "value": 0.9,
+        "weight": 15.0,
+        "points": 13.5,
+        "available": true,
+        "reason": "rule confidence is 90%",
+        "inputs": {
+          "confidence": 90
+        }
+      },
+      {
+        "factor": "asset_criticality",
+        "value": 1.0,
+        "weight": 20.0,
+        "points": 20.0,
+        "available": true,
+        "reason": "asset criticality is CRITICAL",
+        "inputs": {
+          "criticality": "CRITICAL"
+        }
+      },
+      {
+        "factor": "user_risk",
+        "value": 0.7,
+        "weight": 10.0,
+        "points": 7.0,
+        "available": true,
+        "reason": "user risk score is 70/100",
+        "inputs": {
+          "user_risk_score": 70
+        }
+      },
+      {
+        "factor": "threat_intel",
+        "value": 0.95,
+        "weight": 15.0,
+        "points": 14.25,
+        "available": true,
+        "reason": "1 indicator match(es), strongest malicious at 95% confidence",
+        "inputs": {
+          "matches": 1,
+          "strongest": {
+            "value": "1.2.3.4",
+            "classification": "malicious",
+            "confidence": 95,
+            "source": null
+          }
+        }
+      },
+      {
+        "factor": "mitre_context",
+        "value": 1.0,
+        "weight": 7.0,
+        "points": 7.0,
+        "available": true,
+        "reason": "highest-impact technique is T1003.001",
+        "inputs": {
+          "techniques": [
+            "T1003.001",
+            "T1078"
+          ],
+          "worst": "T1003.001"
+        }
+      },
+      {
+        "factor": "behavioral_anomaly",
+        "value": 0.48,
+        "weight": 3.0,
+        "points": 1.44,
+        "available": true,
+        "reason": "anomaly score 0.80 at 60% confidence",
+        "inputs": {
+          "anomaly": {
+            "score": 0.8,
+            "confidence": 60
+          }
+        }
+      }
+    ],
+    "summary": "93/100 (CRITICAL) driven by severity 30.0pts (rule severity is critical), asset_criticality 20.0pts (asset criticality is CRITICAL), threat_intel 14.2pts (1 indicator match(es), strongest malicious at 95% confidence)"
+  },
+  "detection_only": {
+    "score": 40,
+    "bucket": "MEDIUM",
+    "formula_version": "risk-v1",
+    "weights_fingerprint": "40163da1a051d7cf",
+    "available_weight": 45.0,
+    "denominator": 60.0,
+    "total_weight": 100.0,
+    "factors": [
+      {
+        "factor": "severity",
+        "value": 0.5,
+        "weight": 30.0,
+        "points": 15.0,
+        "available": true,
+        "reason": "rule severity is medium",
+        "inputs": {
+          "severity": "medium"
+        }
+      },
+      {
+        "factor": "confidence",
+        "value": 0.6,
+        "weight": 15.0,
+        "points": 9.0,
+        "available": true,
+        "reason": "rule confidence is 60%",
+        "inputs": {
+          "confidence": 60
+        }
+      },
+      {
+        "factor": "asset_criticality",
+        "value": 0.0,
+        "weight": 20.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "asset unknown to the inventory",
+        "inputs": {
+          "criticality": null
+        }
+      },
+      {
+        "factor": "user_risk",
+        "value": 0.0,
+        "weight": 10.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no user risk score available",
+        "inputs": {}
+      },
+      {
+        "factor": "threat_intel",
+        "value": 0.0,
+        "weight": 15.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "threat intel not consulted",
+        "inputs": {}
+      },
+      {
+        "factor": "mitre_context",
+        "value": 0.0,
+        "weight": 7.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no ATT&CK technique mapped",
+        "inputs": {}
+      },
+      {
+        "factor": "behavioral_anomaly",
+        "value": 0.0,
+        "weight": 3.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no behavioural baseline yet",
+        "inputs": {}
+      }
+    ],
+    "summary": "40/100 (MEDIUM) driven by severity 15.0pts (rule severity is medium), confidence 9.0pts (rule confidence is 60%)"
+  },
+  "no_inputs": {
+    "score": 0,
+    "bucket": "LOW",
+    "formula_version": "risk-v1",
+    "weights_fingerprint": "40163da1a051d7cf",
+    "available_weight": 0,
+    "denominator": 0.0,
+    "total_weight": 100.0,
+    "factors": [
+      {
+        "factor": "severity",
+        "value": 0.0,
+        "weight": 30.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no severity on the detection",
+        "inputs": {
+          "severity": null
+        }
+      },
+      {
+        "factor": "confidence",
+        "value": 0.0,
+        "weight": 15.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no confidence recorded",
+        "inputs": {}
+      },
+      {
+        "factor": "asset_criticality",
+        "value": 0.0,
+        "weight": 20.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "asset unknown to the inventory",
+        "inputs": {
+          "criticality": null
+        }
+      },
+      {
+        "factor": "user_risk",
+        "value": 0.0,
+        "weight": 10.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no user risk score available",
+        "inputs": {}
+      },
+      {
+        "factor": "threat_intel",
+        "value": 0.0,
+        "weight": 15.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "threat intel not consulted",
+        "inputs": {}
+      },
+      {
+        "factor": "mitre_context",
+        "value": 0.0,
+        "weight": 7.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no ATT&CK technique mapped",
+        "inputs": {}
+      },
+      {
+        "factor": "behavioral_anomaly",
+        "value": 0.0,
+        "weight": 3.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no behavioural baseline yet",
+        "inputs": {}
+      }
+    ],
+    "summary": "0/100 (LOW): no factor contributed"
+  },
+  "intel_consulted_and_clean": {
+    "score": 55,
+    "bucket": "HIGH",
+    "formula_version": "risk-v1",
+    "weights_fingerprint": "40163da1a051d7cf",
+    "available_weight": 80.0,
+    "denominator": 80.0,
+    "total_weight": 100.0,
+    "factors": [
+      {
+        "factor": "severity",
+        "value": 0.75,
+        "weight": 30.0,
+        "points": 22.5,
+        "available": true,
+        "reason": "rule severity is high",
+        "inputs": {
+          "severity": "high"
+        }
+      },
+      {
+        "factor": "confidence",
+        "value": 0.75,
+        "weight": 15.0,
+        "points": 11.25,
+        "available": true,
+        "reason": "rule confidence is 75%",
+        "inputs": {
+          "confidence": 75
+        }
+      },
+      {
+        "factor": "asset_criticality",
+        "value": 0.5,
+        "weight": 20.0,
+        "points": 10.0,
+        "available": true,
+        "reason": "asset criticality is MEDIUM",
+        "inputs": {
+          "criticality": "MEDIUM"
+        }
+      },
+      {
+        "factor": "user_risk",
+        "value": 0.0,
+        "weight": 10.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no user risk score available",
+        "inputs": {}
+      },
+      {
+        "factor": "threat_intel",
+        "value": 0.0,
+        "weight": 15.0,
+        "points": 0.0,
+        "available": true,
+        "reason": "no indicator matched",
+        "inputs": {
+          "matches": 0
+        }
+      },
+      {
+        "factor": "mitre_context",
+        "value": 0.0,
+        "weight": 7.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no ATT&CK technique mapped",
+        "inputs": {}
+      },
+      {
+        "factor": "behavioral_anomaly",
+        "value": 0.0,
+        "weight": 3.0,
+        "points": 0.0,
+        "available": false,
+        "reason": "no behavioural baseline yet",
+        "inputs": {}
+      }
+    ],
+    "summary": "55/100 (HIGH) driven by severity 22.5pts (rule severity is high), confidence 11.2pts (rule confidence is 75%), asset_criticality 10.0pts (asset criticality is MEDIUM)"
+  }
+}

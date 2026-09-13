@@ -11,37 +11,33 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 7 complete — Correlation Engine
+## Status: PHASE 8 complete — Risk Engine
 
-Phases 0–6 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
-ingestion, OCSF normalization, the OpenSearch event store, and the detection
-engine) are done. Phase 7 adds the layer that makes a sequence mean more
-than its parts: a correlation rule DSL over the same safe condition grammar,
-an engine consuming both `events.normalized` and `detections.created`,
-automatic timeline construction, and three shipped chains (account takeover,
-credential dumping → lateral movement, document execution → persistence).
+Phases 0–7 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
+ingestion, OCSF normalization, event store, detection, correlation) are
+done. Phase 8 scores what the pipeline produces: a versioned, explainable
+weighted sum over seven factors — severity, confidence, asset criticality,
+user risk, threat intel, MITRE context, behavioural anomaly — normalized to
+0–100 and bucketed LOW/MEDIUM/HIGH/CRITICAL. Every detection and correlation
+now carries `risk_score`, `risk_bucket` and a `risk_explanation` that
+reconstructs the arithmetic factor by factor, including the factors that had
+no data. Full reference: [`docs/RISK_SCORING.md`](docs/RISK_SCORING.md).
 
-Two risks from the Phase 0 register are closed by tests rather than by
-assertion:
+Two spec rules are enforced by the formula rather than by prose: an
+indicator's contribution is scaled by *its own* confidence (§11 — a feed is
+not proof), and behavioural anomaly carries the smallest weight in the table
+(§17 — an anomaly can tip a borderline score, never manufacture one).
 
-- **Technical Risk #4 (state lost on restart).** In-flight chains live in
-  Redis keyed by (tenant, rule, entity) with a TTL equal to the rule window;
-  append-and-read is one Lua script so replicas cannot interleave. A test
-  destroys the engine mid-chain, rebuilds it from a fresh client, and the
-  chain still completes.
-- **Technical Risk #5 (timestamp manipulation).** Ordering and windowing use
-  an effective time — the source's clock when plausible, ingestion time when
-  not. Tests back-date a stage by two days and future-date another by a
-  month; both still correlate, and a genuinely old event still falls outside
-  the window, so the backstop does not degrade into "everything correlates".
+Phase 8 also adds the `/assets` API, because asset criticality is a
+user-editable multiplier on every score: it is permission-gated, every
+mutation is audit-logged in the same transaction, and a criticality change
+gets its own audit action with before/after values.
 
-343/343 backend tests passing against real PostgreSQL, real Redis and a real
-OpenSearch cluster with the security plugin enabled. Ruff, mypy, Bandit and
-pip-audit all clean. The pipeline runs collector → ingest → parse →
-normalize → enrich → index → detect → correlate. Alerts are Phase 11; the
-frontend is still the Phase 1 placeholder. Quickstart:
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md); rule reference:
-[`DETECTION_ENGINE.md`](DETECTION_ENGINE.md).
+406/406 backend tests passing against real PostgreSQL, real Redis and a real
+OpenSearch cluster with the security plugin enabled — including golden-file
+tests that lock each score *and* its explanation, per-factor cap tests, and
+bucket boundary tests at 24/25, 49/50 and 74/75. Ruff, mypy, Bandit and
+pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -70,7 +66,8 @@ frontend is still the Phase 1 placeholder. Quickstart:
 
 ## Next step
 
-Phase 8 — Risk Engine: a versioned, explainable weighted-sum score
-(severity, confidence, asset criticality, user risk, threat intel, MITRE
-context, behavioural anomaly) with a `risk_explanation` an analyst can read
-back (see `docs/DEVELOPMENT_PLAN.md`).
+Phase 9 — Threat Intelligence: IOC management for all ten types in spec §11
+with confidence/source/expiration history, a pluggable feed connector behind
+the egress allow-list, and IOC matching wired into the enrichment pipeline
+(which is what finally gives the risk engine's threat-intel factor a real
+producer).

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
+from app.api.assets import router as assets_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.ingestion import router as ingestion_router
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(organizations_router)
     app.include_router(ingestion_router)
     app.include_router(rules_router)
+    app.include_router(assets_router)
 
     @app.middleware("http")
     async def track_requests(request, call_next):  # type: ignore[no-untyped-def]

@@ -32,6 +32,7 @@ import logging
 import signal
 import time
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 
@@ -56,6 +57,7 @@ from app.detection.engine import (
 from app.detection.schema import DetectionRule
 from app.detection.windowed import WindowedEvaluator
 from app.models.identity import Organization
+from app.risk.engine import apply_to_detection
 from app.services.detection_rules import load_active_rules
 
 logger = logging.getLogger(__name__)
@@ -168,22 +170,29 @@ class DetectionWorker:
 
         engine = await self._registry.engine_for(tenant_id)
         matches = await engine.evaluate(document)
-        await self.publish(matches)
+        # Scored here rather than inside the engine because this is where
+        # the enriched event is: asset criticality, user risk and IOC
+        # matches are enrichment output, not rule output (Phase 8).
+        await self.publish(matches, event=document)
 
         if message.message_id is not None:
             await self._bus.ack(self._topic, CONSUMER_GROUP, message.message_id)
 
-    async def publish(self, matches: list[RuleMatch]) -> None:
+    async def publish(
+        self, matches: list[RuleMatch], event: dict[str, Any] | None = None
+    ) -> None:
         for match in matches:
+            document = apply_to_detection(match.to_document(), event)
             await self._bus.publish(
                 self._output_topic,
                 EventBusMessage(
                     tenant_id=match.tenant_id,
                     key=match.detection_id,
-                    payload=json.dumps(match.to_document()).encode(),
+                    payload=json.dumps(document).encode(),
                     headers={
                         "rule_id": match.rule_id,
                         "severity": match.severity,
+                        "risk_bucket": str(document["risk_bucket"]),
                         # Carried in a header as well as the body so a
                         # downstream consumer can drop dry-run detections
                         # without deserializing them.

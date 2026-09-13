@@ -42,6 +42,7 @@ from app.correlation.engine import (
 from app.correlation.loader import load_correlation_rules_or_raise
 from app.correlation.state import RedisCorrelationStateStore
 from app.detection.engine import RedisSuppressionStore
+from app.risk.engine import apply_to_correlation
 
 logger = logging.getLogger(__name__)
 
@@ -90,15 +91,20 @@ class CorrelationWorker:
 
     async def publish(self, matches: list[CorrelationMatch]) -> None:
         for match in matches:
+            # A correlation is scored on the worst context its whole chain
+            # touched, which is only knowable once the chain is complete
+            # (app/risk/engine.py).
+            document = apply_to_correlation(match.to_document())
             await self._bus.publish(
                 self._output_topic,
                 EventBusMessage(
                     tenant_id=match.tenant_id,
                     key=match.correlation_uid,
-                    payload=json.dumps(match.to_document()).encode(),
+                    payload=json.dumps(document).encode(),
                     headers={
                         "correlation_id": match.correlation_id,
                         "severity": match.severity,
+                        "risk_bucket": str(document["risk_bucket"]),
                     },
                 ),
             )

@@ -275,17 +275,52 @@ Two behaviours to keep in mind while working on this:
 - **Completion is re-checked on every input**, so a chain can complete when
   its *first* stage finally arrives. There is no timer closing windows.
 
-## What's here vs. what's not (Phase 7)
+## Risk scoring and the asset inventory (Phase 8)
 
-Phases 0–7 are done: architecture, repo/infra scaffolding,
+Detections and correlations are scored as they are produced, so the document
+on `detections.created` / `correlations.created` already carries
+`risk_score`, `risk_bucket` and `risk_explanation`. Nothing separate needs
+to run. The formula, its weights and its versioning rules are in
+[`docs/RISK_SCORING.md`](RISK_SCORING.md).
+
+Asset criticality is one of the score's inputs, so the inventory behind it
+is a security-relevant surface:
+
+```bash
+curl -sX POST localhost:8000/assets -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' \
+  -d '{"asset_type":"server","hostname":"dc01","ip_address":"10.1.1.10","criticality":"CRITICAL"}'
+
+curl -s localhost:8000/assets -H "Authorization: Bearer <token>"
+```
+
+Changing a criticality writes a `CHANGE_ASSET_CRITICALITY` audit entry with
+the before and after values — its own action, so downgrades are searchable
+without diffing every asset edit.
+
+If you change a weight in `app/risk/model.py`, the build fails until
+`FORMULA_VERSION` moves with it and the golden file is regenerated:
+
+```bash
+cd backend && .venv/bin/python -m pytest app/tests/test_risk.py -q
+```
+
+That is deliberate. Scores computed under different weights are not
+comparable, and a stored `risk_explanation` is the only way to understand an
+old alert's number.
+
+## What's here vs. what's not (Phase 8)
+
+Phases 0–8 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
-the OpenSearch event store with enrichment, the detection engine, and
-correlation. The pipeline runs end to end — a syslog line or REST payload
+the OpenSearch event store with enrichment, the detection engine,
+correlation, and risk scoring. The pipeline runs end to end — a syslog line or REST payload
 becomes an enriched, searchable, tenant-isolated document; a rule match
 becomes a detection on `detections.created`; and a sequence of those becomes
 a correlation with a timeline on `correlations.created`.
 
-Nothing yet consumes correlations: scoring them is Phase 8, and turning them
-into alerts an analyst works is Phase 11. The frontend still shows only the Phase 1
+Everything is scored, but nothing yet becomes an alert an analyst works:
+threat intelligence is Phase 9, ATT&CK coverage Phase 10, and the alert
+lifecycle Phase 11. The frontend still shows only the Phase 1
 placeholder page; SOC screens are Phase 14. See
 `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.
