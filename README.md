@@ -11,32 +11,33 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 8 complete — Risk Engine
+## Status: PHASE 9 complete — Threat Intelligence
 
-Phases 0–7 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
-ingestion, OCSF normalization, event store, detection, correlation) are
-done. Phase 8 scores what the pipeline produces: a versioned, explainable
-weighted sum over seven factors — severity, confidence, asset criticality,
-user risk, threat intel, MITRE context, behavioural anomaly — normalized to
-0–100 and bucketed LOW/MEDIUM/HIGH/CRITICAL. Every detection and correlation
-now carries `risk_score`, `risk_bucket` and a `risk_explanation` that
-reconstructs the arithmetic factor by factor, including the factors that had
-no data. Full reference: [`docs/RISK_SCORING.md`](docs/RISK_SCORING.md).
+Phases 0–8 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
+ingestion, OCSF normalization, event store, detection, correlation, risk
+scoring) are done. Phase 9 gives the risk engine's threat-intel factor a
+real producer: IOC management for all ten types in spec §11 with
+confidence, source, tags, expiry and per-field history; pluggable feed
+connectors; and indicator matching inside the enrichment pipeline, so a
+detection on a known-bad address now outranks the same detection on an
+unknown one. Full reference:
+[`docs/THREAT_INTELLIGENCE.md`](docs/THREAT_INTELLIGENCE.md).
 
-Two spec rules are enforced by the formula rather than by prose: an
-indicator's contribution is scaled by *its own* confidence (§11 — a feed is
-not proof), and behavioural anomaly carries the smallest weight in the table
-(§17 — an anomaly can tip a borderline score, never manufacture one).
+Spec §11's rule — *an indicator is never automatically malicious just
+because a feed said so* — is enforced in four independent places: a database
+constraint refusing a malicious verdict with no source, a parser that
+attaches no verdict to a bare blocklist, an upsert that never upgrades a
+classification on re-seeing an indicator, and the risk engine scaling each
+match by its own recorded confidence.
 
-Phase 8 also adds the `/assets` API, because asset criticality is a
-user-editable multiplier on every score: it is permission-gated, every
-mutation is audit-logged in the same transaction, and a criticality change
-gets its own audit action with before/after values.
+Outbound requests now go through an egress guard (THREAT_MODEL.md §3.8):
+HTTPS only, a fail-closed host allow-list, every resolved address checked
+against loopback/private/link-local ranges — 169.254.169.254 included — and
+redirects re-validated rather than followed. Its residual DNS-rebinding
+window is documented rather than claimed closed.
 
-406/406 backend tests passing against real PostgreSQL, real Redis and a real
-OpenSearch cluster with the security plugin enabled — including golden-file
-tests that lock each score *and* its explanation, per-factor cap tests, and
-bucket boundary tests at 24/25, 49/50 and 74/75. Ruff, mypy, Bandit and
+499/499 backend tests passing against real PostgreSQL, real Redis and a real
+OpenSearch cluster with the security plugin enabled. Ruff, mypy, Bandit and
 pip-audit all clean.
 
 ## Phase 0 deliverables
@@ -66,8 +67,7 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 9 — Threat Intelligence: IOC management for all ten types in spec §11
-with confidence/source/expiration history, a pluggable feed connector behind
-the egress allow-list, and IOC matching wired into the enrichment pipeline
-(which is what finally gives the risk engine's threat-intel factor a real
-producer).
+Phase 10 — MITRE ATT&CK: an import/update mechanism for tactics, techniques
+and sub-techniques (not a hardcoded table), `rule_mitre_map` populated from
+the Phase 6 rules, and the coverage API — techniques covered and not
+covered, detections per technique, coverage rate.

@@ -1,10 +1,10 @@
-"""Concrete enrichment providers (spec §5 pipeline step, Phase 5).
+"""Concrete enrichment providers (spec §5 pipeline step).
 
-Scope note: threat-intel/IOC matching is Phase 9 and UEBA user-risk is
-Phase 17 — both plug in here as additional providers with no change to the
-pipeline. What ships now is the enrichment that has a real data source
-today: the asset inventory built in Phase 2's schema, and network context
-derivable from the event itself.
+Scope note: UEBA user-risk is a later phase and plugs in here as one more
+provider with no change to the pipeline. What ships today: network context
+derived from the event itself (Phase 5), the asset inventory (Phase 5, and
+the highest-weighted risk input), and indicator matching against the threat
+intelligence set (Phase 9).
 """
 
 import ipaddress
@@ -13,9 +13,12 @@ from typing import Any, ClassVar
 
 from sqlalchemy import or_, select
 
+from app.core import metrics
 from app.core.db import tenant_scoped_session
 from app.enrichment.base import EnrichmentProvider, EnrichmentResult
 from app.models.assets import Asset
+from app.services.threat_intel import match as match_indicators
+from app.threat_intel.normalize import observables_from_event
 
 
 class NetworkContextProvider(EnrichmentProvider):
@@ -80,6 +83,54 @@ class AssetContextProvider(EnrichmentProvider):
                     "risk_context": {"asset_criticality": asset.criticality},
                 }
             )
+
+
+class IocMatchProvider(EnrichmentProvider):
+    """Matches the event's observables against the indicator set (spec §11).
+
+    What it writes is deliberately not a boolean. Each match carries its
+    classification, its confidence and its source, because the risk engine
+    scales an indicator's contribution by that confidence (Phase 8) and an
+    analyst has to be able to see who is making the claim — a 40%-confidence
+    hit from a bulk blocklist and a 95%-confidence hit from incident
+    response are not the same finding.
+
+    A single query per event covers every observable; expired indicators are
+    filtered in that query, so an indicator stops matching the moment it
+    lapses rather than when some sweeper next runs.
+    """
+
+    name: ClassVar[str] = "ioc_match"
+
+    async def enrich(self, document: dict[str, Any]) -> EnrichmentResult:
+        tenant_id = document.get("tenant_id")
+        if not tenant_id:
+            return EnrichmentResult()
+
+        observables = observables_from_event(document)
+        if not observables:
+            return EnrichmentResult()
+
+        async with tenant_scoped_session(uuid.UUID(str(tenant_id))) as db:
+            matches = await match_indicators(db, uuid.UUID(str(tenant_id)), observables)
+
+        # An empty list is a real result, not an absent one: "we looked and
+        # found nothing" is what lets the risk engine score the threat-intel
+        # factor as available-and-zero instead of unknown (Phase 8).
+        if not matches:
+            return EnrichmentResult(fields={"ioc_matches": []})
+
+        worst = max(matches, key=lambda item: _CLASSIFICATION_RANK.get(item["classification"], 0))
+        metrics.ioc_matches_total.labels(classification=worst["classification"]).inc()
+        return EnrichmentResult(
+            fields={
+                "ioc_matches": matches,
+                "risk_context": {"ioc_classification": worst["classification"]},
+            }
+        )
+
+
+_CLASSIFICATION_RANK = {"benign": 0, "unknown": 1, "suspicious": 2, "malicious": 3}
 
 
 def _is_private(value: Any) -> bool | None:

@@ -73,6 +73,27 @@ class Settings(BaseSettings):
     # time instead (Technical Risk #5: timestamp-manipulation evasion).
     correlation_max_clock_skew_seconds: int = 900
 
+    # --- Outbound egress guard (Phase 9, THREAT_MODEL.md §3.8) ---
+    # Comma-separated hosts the platform may fetch from. EMPTY MEANS
+    # NOTHING IS REACHABLE — the guard fails closed, so a deployment that
+    # wants feeds must name their hosts. A leading dot matches subdomains
+    # (".example.com"); anything else must match exactly.
+    egress_allowed_hosts: str = ""
+    # Local development only. Plain HTTP means an on-path attacker chooses
+    # what your threat intelligence says.
+    egress_allow_http: bool = False
+    # Local development only. Disables the check that refuses hosts
+    # resolving to loopback, private, link-local (169.254.169.254) or
+    # reserved addresses — i.e. it disables the SSRF protection itself.
+    egress_allow_private_destinations: bool = False
+
+    # --- Threat intelligence (Phase 9) ---
+    threat_intel_feed_interval_seconds: int = 3600
+    threat_intel_default_ttl_days: int = 30
+    # Where file-drop feeds are read from. Filenames from feed config are
+    # confined to this directory (path traversal, THREAT_MODEL.md §3.8).
+    threat_intel_drop_dir: str = "/app/intel-drop"
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"

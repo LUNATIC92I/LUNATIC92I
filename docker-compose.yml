@@ -193,6 +193,29 @@ services:
     mem_limit: 512m
     cpus: 1.0
 
+  # Threat-intelligence feed worker: pulls configured feeds on an interval
+  # and writes indicators. Separate from the pipeline workers because a feed
+  # sync is long, network-bound and failure-prone, and must never be able to
+  # stall event processing. All outbound requests go through the egress
+  # allow-list (THREAT_MODEL.md §3.8).
+  feeds:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.workers.feed_worker"]
+    restart: unless-stopped
+    env_file: .env
+    networks: [app, data]
+    volumes:
+      # Where file-drop intelligence is placed. Read-only: this worker reads
+      # intel, it never writes to the drop directory.
+      - ./intel-drop:/app/intel-drop:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+
   # Syslog collector: a separate deployable from the API so the ingestion
   # hot path never shares a failure domain with request/response traffic
   # (ARCHITECTURE.md §3). Started only when SYSLOG_TENANT_ID and an explicit

@@ -21,7 +21,11 @@ from app.core.eventbus import TOPIC_EVENTS_NORMALIZED, EventBus, EventBusMessage
 from app.core.logging import configure_logging
 from app.core.opensearch import get_opensearch
 from app.enrichment.base import EnrichmentPipeline
-from app.enrichment.providers import AssetContextProvider, NetworkContextProvider
+from app.enrichment.providers import (
+    AssetContextProvider,
+    IocMatchProvider,
+    NetworkContextProvider,
+)
 from app.services.index_management import bootstrap_indices
 from app.services.indexing import EventIndexer
 
@@ -33,7 +37,13 @@ DEFAULT_FLUSH_INTERVAL_SECONDS = 2.0
 
 
 def default_pipeline() -> EnrichmentPipeline:
-    return EnrichmentPipeline((NetworkContextProvider(), AssetContextProvider()))
+    # Order is irrelevant to correctness (providers run concurrently and
+    # merge), but is listed cheapest-first for readability: network context
+    # needs no I/O, asset context is one indexed lookup, indicator matching
+    # is one indexed lookup over every observable in the event.
+    return EnrichmentPipeline(
+        (NetworkContextProvider(), AssetContextProvider(), IocMatchProvider())
+    )
 
 
 class IndexerWorker:

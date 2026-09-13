@@ -202,3 +202,30 @@ risk_scores_total = Counter(
     "Risk assessments computed, by bucket",
     ["bucket"],
 )
+
+ioc_feed_indicators_total = Counter(
+    "ioc_feed_indicators_total",
+    "Indicators written by a threat-intelligence feed sync",
+    ["source", "outcome"],
+)
+
+ioc_feed_sync_failures_total = Counter(
+    "ioc_feed_sync_failures_total",
+    "Feed syncs that failed. Sustained values mean the intel is going stale.",
+    ["source", "reason"],
+)
+
+ioc_matches_total = Counter(
+    "ioc_matches_total",
+    "Events enriched with at least one indicator match",
+    ["classification"],
+)
+
+egress_requests_blocked_total = Counter(
+    "egress_requests_blocked_total",
+    (
+        "Outbound requests refused by the egress guard. Any value here is "
+        "either a misconfiguration or an SSRF attempt (THREAT_MODEL.md §3.8)."
+    ),
+    ["reason"],
+)

@@ -18,3 +18,4 @@ from app.models.identity import (  # noqa: F401
     User,
     UserRole,
 )
+from app.models.threat_intel import Ioc, IocFeed, IocHistory  # noqa: F401

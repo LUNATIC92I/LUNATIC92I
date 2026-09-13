@@ -1,0 +1,5 @@
+# Intelligence files are operational data (and often licensed): never
+# committed. Only this directory's README and these rules are tracked.
+*
+!.gitignore
+!README.md

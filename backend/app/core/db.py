@@ -2,7 +2,8 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy import text
+from sqlalchemy import event, text
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -37,11 +38,18 @@ async def tenant_scoped_session(tenant_id: uuid.UUID) -> AsyncIterator[AsyncSess
     """A session scoped to a single tenant via the `app.current_tenant_id`
     GUC that every tenant-scoped table's RLS policy checks
     (ARCHITECTURE.md §1 row 3, THREAT_MODEL.md §3.2).
-    `set_config(..., is_local=true)` is the parameterized equivalent of
-    `SET LOCAL` (plain `SET LOCAL` doesn't accept bind parameters) — it
-    resets automatically when the transaction ends, which matters because
-    connections are pooled and reused: the setting must never leak into a
-    later, unrelated request that happens to reuse the same connection.
+
+    The GUC is (re)applied on **every** transaction this session begins, not
+    once when it is opened. `set_config(..., is_local=true)` is the
+    parameterized equivalent of `SET LOCAL` (plain `SET LOCAL` doesn't accept
+    bind parameters), and like SET LOCAL it lasts exactly as long as the
+    transaction — which is what we want, because connections are pooled and
+    a leaked setting would apply to somebody else's later request. The
+    consequence is that a session which commits and then keeps working
+    starts a *new* transaction with no tenant context, and every subsequent
+    read would return nothing while every write would be refused. Hooking
+    `after_begin` removes that trap instead of leaving each caller to
+    remember it.
 
     Deliberately does NOT wrap the session in `session.begin()`: callers
     call `await session.commit()` themselves exactly when they want to
@@ -52,8 +60,39 @@ async def tenant_scoped_session(tenant_id: uuid.UUID) -> AsyncIterator[AsyncSess
     the fail-closed default for read-only routes that (correctly) never
     call commit."""
     async with async_session_factory() as session:
-        await session.execute(
-            text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
-            {"tenant_id": str(tenant_id)},
+        _apply_on_every_transaction(session, "app.current_tenant_id", str(tenant_id))
+        yield session
+
+
+def _apply_on_every_transaction(session: AsyncSession, setting: str, value: str) -> None:
+    """Sets a transaction-local GUC each time this session opens a
+    transaction. Registered on the underlying sync Session because that is
+    where SQLAlchemy emits `after_begin`."""
+
+    @event.listens_for(session.sync_session, "after_begin")
+    def _set_guc(_session: object, _transaction: object, connection: Connection) -> None:
+        connection.execute(
+            text("SELECT set_config(:setting, :value, true)"),
+            {"setting": setting, "value": value},
         )
+
+
+@asynccontextmanager
+async def intel_sync_session() -> AsyncIterator[AsyncSession]:
+    """A session allowed to write **shared** threat-intelligence rows.
+
+    Global feed indicators belong to no tenant, so they cannot be written
+    through `tenant_scoped_session`: that session's RLS policy only accepts
+    rows stamped with its own tenant, and a NULL tenant fails the check. The
+    `app.intel_sync` GUC enables a second policy whose WITH CHECK is the
+    mirror image — it accepts *only* rows with no tenant, so this session
+    cannot touch any tenant's private indicators either (see the Phase 9
+    migration).
+
+    Like `app.current_tenant_id`, this GUC is trusted infrastructure: it is
+    set here and nowhere else, never from request input, and it is
+    re-applied per transaction because it resets with each one.
+    """
+    async with async_session_factory() as session:
+        _apply_on_every_transaction(session, "app.intel_sync", "on")
         yield session

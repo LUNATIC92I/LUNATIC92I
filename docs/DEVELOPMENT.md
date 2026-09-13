@@ -309,18 +309,53 @@ That is deliberate. Scores computed under different weights are not
 comparable, and a stored `risk_explanation` is the only way to understand an
 old alert's number.
 
-## What's here vs. what's not (Phase 8)
+## Threat intelligence (Phase 9)
 
-Phases 0–8 are done: architecture, repo/infra scaffolding,
+Indicators live in PostgreSQL and are matched inside enrichment, so a
+detection on a known-bad address scores higher than the same detection on an
+unknown one with no extra wiring. Reference:
+[`docs/THREAT_INTELLIGENCE.md`](THREAT_INTELLIGENCE.md).
+
+```bash
+# add an indicator (value canonicalized, type inferred, source required)
+curl -sX POST localhost:8000/iocs -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' \
+  -d '{"value":"1.2.3[.]4","classification":"malicious","confidence":90,"source":"incident-response"}'
+
+# triage lookup: paste straight from a report, noise lines are ignored
+curl -sX POST localhost:8000/iocs/match -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{"values":["1.2.3[.]4","hxxp://evil[.]com/a"]}'
+```
+
+Feeds are configured as rows in `ioc_feeds` and synced by the `feeds`
+worker. For local work the file-drop connector needs no network at all:
+
+```bash
+echo "203.0.113.4" > intel-drop/blocklist.txt
+docker compose up -d feeds
+```
+
+Two things to know before touching this area:
+
+- **`EGRESS_ALLOWED_HOSTS` is empty by default and the guard fails closed**,
+  so an HTTP feed will be refused until its host is named. That is
+  deliberate: the alternative is a SIEM that fetches whatever a config row
+  tells it to.
+- **Feed credentials never go in the database.** `credential_ref` names an
+  environment variable; the value is read at sync time.
+
+## What's here vs. what's not (Phase 9)
+
+Phases 0–9 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
 the OpenSearch event store with enrichment, the detection engine,
-correlation, and risk scoring. The pipeline runs end to end — a syslog line or REST payload
+correlation, risk scoring, and threat intelligence. The pipeline runs end to end — a syslog line or REST payload
 becomes an enriched, searchable, tenant-isolated document; a rule match
 becomes a detection on `detections.created`; and a sequence of those becomes
 a correlation with a timeline on `correlations.created`.
 
-Everything is scored, but nothing yet becomes an alert an analyst works:
-threat intelligence is Phase 9, ATT&CK coverage Phase 10, and the alert
-lifecycle Phase 11. The frontend still shows only the Phase 1
+Everything is enriched, scored and correlated, but nothing yet becomes an
+alert an analyst works: ATT&CK coverage is Phase 10 and the alert lifecycle
+is Phase 11. The frontend still shows only the Phase 1
 placeholder page; SOC screens are Phase 14. See
 `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.
