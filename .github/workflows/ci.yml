@@ -55,6 +55,22 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # The security plugin stays enabled: the DLS tenant-isolation tests
+      # are the whole point of testing against a real cluster, and they
+      # cannot run without it.
+      opensearch:
+        image: opensearchproject/opensearch:2.17.1
+        env:
+          discovery.type: single-node
+          bootstrap.memory_lock: "false"
+          OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+          OPENSEARCH_INITIAL_ADMIN_PASSWORD: Ci-Test-Only-Password-1!
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sk -u admin:Ci-Test-Only-Password-1! https://localhost:9200/_cluster/health || exit 1"
+          --health-interval 15s --health-timeout 10s --health-retries 20
+          --health-start-period 60s
     env:
       DATABASE_URL: postgresql+asyncpg://lunatic:ci-test-only-password@localhost:5432/lunatic_siem_test
       JWT_SECRET_KEY: ci-test-only-secret-not-for-production
@@ -63,6 +79,10 @@ jobs:
       MFA_ENCRYPTION_KEY: BAXh6NR-CnCtWopK3oargngPR5TujRZgroL-3xioUI0=
       MAX_FAILED_LOGIN_ATTEMPTS: "3"
       REDIS_URL: redis://localhost:6379/0
+      OPENSEARCH_URL: https://localhost:9200
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: Ci-Test-Only-Password-1!
+      OPENSEARCH_VERIFY_CERTS: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

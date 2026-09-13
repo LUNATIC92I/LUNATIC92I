@@ -167,13 +167,45 @@ Anything no parser can handle is dead-lettered with the reason attached and
 the original bytes intact — it is never stored as an unparsed blob, which
 would be a silent detection gap.
 
-## What's here vs. what's not (Phase 4)
+## The event store (Phase 5)
 
-Phases 0–4: architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy, event ingestion, and parsing/OCSF normalization are done.
+The `indexer` worker consumes `events.normalized`, enriches, and bulk-writes
+to OpenSearch. It also applies the index templates and lifecycle policies at
+startup, so a fresh cluster is correct before the first write rather than
+inheriting a guessed dynamic mapping.
 
-Normalized events currently land on `events.normalized` and stop there —
-nothing indexes them yet. OpenSearch indexing and enrichment are Phase 5,
-detection is Phase 6. The frontend still shows only the Phase 1 placeholder
-page; SOC screens are Phase 14. See `docs/DEVELOPMENT_PLAN.md` for each
-phase's acceptance criteria.
+```bash
+docker compose up -d indexer
+curl -sk -u "admin:$OPENSEARCH_PASSWORD" \
+  "https://localhost:9200/events-normalized-write/_search?pretty" \
+  -H 'content-type: application/json' -d '{"query":{"match_all":{}}}'
+```
+
+Two things worth knowing when working on this:
+
+- **The mapping is declared, not inferred** (`dynamic: false`). A field the
+  normalizer emits but the mapping never declared is stored yet
+  unsearchable — `test_normalization.py` fails the build if that ever
+  happens, and `test_opensearch.py` asserts code and cluster agree.
+- **Tenant isolation is enforced by OpenSearch**, not only by query
+  builders. A single `lunatic_tenant_reader` role carries a DLS query
+  substituting each user's `tenant_id` attribute, so an analyst's
+  credentials cannot see another tenant's events even with an unfiltered
+  `match_all` — the mirror of PostgreSQL RLS on the relational side.
+
+Running the OpenSearch tests locally needs a real cluster with the security
+plugin enabled; `scripts/dev-services.sh` starts one if `OPENSEARCH_HOME`
+points at an install (default `/opt/os`), and skips it otherwise.
+
+## What's here vs. what's not (Phase 5)
+
+Phases 0–5 are done: architecture, repo/infra scaffolding,
+authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
+and the OpenSearch event store with enrichment. The pipeline runs end to
+end — a syslog line or REST payload becomes an enriched, searchable,
+tenant-isolated document.
+
+Nothing yet *reacts* to those events: detection rules are Phase 6,
+correlation Phase 7, risk scoring Phase 8, alerts Phase 11. The frontend
+still shows only the Phase 1 placeholder page; SOC screens are Phase 14.
+See `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

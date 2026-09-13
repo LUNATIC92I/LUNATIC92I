@@ -14,7 +14,8 @@ dependencies = [
     "psycopg2-binary>=2.9,<3.0",  # sync driver used by Alembic migrations only
     "httpx>=0.28,<0.29",
     "redis>=8.1,<9.0",
-    "opensearch-py>=3.2,<4.0",
+    # [async] pulls aiohttp, without which AsyncOpenSearch is not exported.
+    "opensearch-py[async]>=3.2,<4.0",
     "prometheus-client>=0.26,<0.27",
     "python-json-logger>=4.2,<5.0",
     "PyYAML>=6.0,<7.0",

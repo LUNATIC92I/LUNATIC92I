@@ -122,6 +122,26 @@ services:
     mem_limit: 512m
     cpus: 1.0
 
+  # Indexer worker: events.normalized -> enrich -> OpenSearch. Also applies
+  # the index templates and lifecycle policies at startup, so a fresh
+  # cluster is correct before the first write rather than inheriting a
+  # guessed dynamic mapping.
+  indexer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.workers.indexer_worker"]
+    restart: unless-stopped
+    env_file: .env
+    networks: [app, data]
+    depends_on:
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 1.0
+
   # Syslog collector: a separate deployable from the API so the ingestion
   # hot path never shares a failure domain with request/response traffic
   # (ARCHITECTURE.md §3). Started only when SYSLOG_TENANT_ID and an explicit

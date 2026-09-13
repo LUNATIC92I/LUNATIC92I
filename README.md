@@ -11,30 +11,34 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 4 complete — parsing & OCSF normalization
+## Status: PHASE 5 complete — OpenSearch event store
 
-Phases 0–3 (architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy, event ingestion) are done. Phase 4 adds the parsing stage: a
-common parser interface with JSON, syslog (RFC 3164 + 5424), CEF, LEEF,
-Windows Event XML, Apache/Nginx access log and generic `key=value` parsers,
-priority-ordered format detection, and mapping into OCSF 1.1.0 with the
-flat indexed projections the search layer needs. The raw payload is carried
-through untouched at every step.
+Phases 0–4 (architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy, event ingestion, parsing/OCSF normalization) are done. Phase
+5 lands events in the store and makes them searchable: index templates,
+aliases and lifecycle policies bootstrapped in code; a failure-isolated
+enrichment pipeline (asset criticality, network context) that can never
+block ingestion; a bulk indexer that reports per-document rejections
+instead of treating a 200 as success; and **Document-Level Security** as
+the event-store half of tenant isolation, matching PostgreSQL RLS on the
+relational side.
 
-Normalized events currently land on `events.normalized` and stop there —
-OpenSearch indexing is Phase 5, detection is Phase 6. The frontend is still
+The pipeline now runs end to end — collector → ingest → parse → normalize →
+enrich → indexed and queryable. Detection is Phase 6. The frontend is still
 the Phase 1 placeholder. Quickstart:
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
-130/130 backend tests passing against real PostgreSQL and real Redis. Phase
-4 adds, per format, a positive case and a malformed case proving rejection
-rather than a crash or silent junk; XXE and billion-laughs refusal on
-Windows XML; a fuzz-ish sweep asserting the registry's only failure mode is
-`ParserError`; proof that a crashing parser degrades to a dead-lettered
-event instead of stalling the pipeline; and a contract test that fails the
-build if the normalizer emits a field the OpenSearch mapping never declared
-(which, under `dynamic: false`, would be silently unsearchable). Ruff,
-mypy, Bandit, and pip-audit all clean.
+163/163 backend tests passing against real PostgreSQL, real Redis and a
+real OpenSearch cluster with the security plugin enabled. Phase 5's tests
+are deliberately unmocked, because every claim it makes is a claim about
+server behavior: that the mapping is actually applied (`source_ip` typed as
+`ip`, so CIDR hunting works), that `dynamic: false` stores unexpected
+fields without failing ingestion, that re-indexing an event id overwrites
+rather than duplicates, that a bulk-rejected document is surfaced rather
+than silently lost, and — the isolation claim — that a tenant's reader
+issuing a `match_all` query with no filter whatsoever still sees only its
+own events, and cannot write to the index at all. Ruff, mypy, Bandit, and
+pip-audit all clean.
 
 ## Phase 0 deliverables
 
@@ -63,6 +67,7 @@ mypy, Bandit, and pip-audit all clean.
 
 ## Next step
 
-Phase 5 — OpenSearch integration: index templates and ILM, the enrichment
-pipeline, and Document-Level Security as the second tenant-isolation layer
-on the event store (see `docs/DEVELOPMENT_PLAN.md`).
+Phase 6 — Detection Engine: the YAML rule DSL, streaming and windowed
+evaluators, and the first Authentication and Windows rule families, each
+with the positive/negative/boundary test set the plan requires (see
+`docs/DEVELOPMENT_PLAN.md`).

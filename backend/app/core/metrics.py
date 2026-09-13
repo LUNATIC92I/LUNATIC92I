@@ -80,3 +80,26 @@ processing_latency_seconds = Histogram(
     "Time to parse and normalize one event",
     ["format"],
 )
+
+enrichment_failures_total = Counter(
+    "enrichment_failures_total",
+    "Enrichment providers that timed out or errored (the event still indexes)",
+    ["provider", "reason"],
+)
+
+events_indexed_total = Counter(
+    "events_indexed_total",
+    "Normalized events written to the OpenSearch event store",
+    ["source_type"],
+)
+
+index_failures_total = Counter(
+    "index_failures_total",
+    "Documents OpenSearch rejected or that could not be written",
+    ["reason"],
+)
+
+index_latency_seconds = Histogram(
+    "index_latency_seconds",
+    "Time to write one bulk batch to OpenSearch",
+)

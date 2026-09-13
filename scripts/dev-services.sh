@@ -27,3 +27,21 @@ echo "==> Redis"
 redis-cli ping >/dev/null 2>&1 || redis-server --daemonize yes --port 6379
 until redis-cli ping >/dev/null 2>&1; do sleep 0.5; done
 echo "    ready"
+
+# OpenSearch is optional: only the app/tests/test_opensearch.py suite needs
+# it, and it is far heavier than Postgres/Redis. Set OPENSEARCH_HOME to a
+# local install to have this script manage it too.
+OPENSEARCH_HOME="${OPENSEARCH_HOME:-/opt/os}"
+OPENSEARCH_PASSWORD="${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-LunaticDev-Test-1!}"
+if [ -x "${OPENSEARCH_HOME}/bin/opensearch" ]; then
+    echo "==> OpenSearch"
+    if ! curl -sk -u "admin:${OPENSEARCH_PASSWORD}" https://localhost:9200 >/dev/null 2>&1; then
+        su opensearch -c "unset JAVA_TOOL_OPTIONS; cd ${OPENSEARCH_HOME} && nohup ./bin/opensearch > /tmp/opensearch.log 2>&1 &"
+        until curl -sk -u "admin:${OPENSEARCH_PASSWORD}" https://localhost:9200 >/dev/null 2>&1; do
+            sleep 3
+        done
+    fi
+    echo "    ready"
+else
+    echo "==> OpenSearch: not installed at ${OPENSEARCH_HOME}, skipping"
+fi

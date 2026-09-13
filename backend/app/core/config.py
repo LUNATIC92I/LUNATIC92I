@@ -30,7 +30,18 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://lunatic:lunatic@localhost:5432/lunatic_siem"
     redis_url: str = "redis://localhost:6379/0"
-    opensearch_url: str = "http://localhost:9200"
+
+    opensearch_url: str = "https://localhost:9200"
+    opensearch_username: str = ""
+    opensearch_password: str = ""
+    # Must be true in production. False is only for local clusters using the
+    # self-signed demo certificates (see app/core/opensearch.py).
+    opensearch_verify_certs: bool = True
+    # Retention, in days, per index family. Configurable per deployment
+    # because retention is a compliance decision, not an engineering one.
+    opensearch_raw_retention_days: int = 90
+    opensearch_normalized_retention_days: int = 180
+    opensearch_deadletter_retention_days: int = 90
 
     # --- Ingestion (Phase 3) ---
     ingest_max_payload_bytes: int = 1024 * 1024
