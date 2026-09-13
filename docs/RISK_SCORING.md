@@ -142,10 +142,14 @@ edit. Cross-tenant edits are refused by RLS and by the API, and tested.
 
 ## Known limits
 
-- `TECHNIQUE_IMPACT` is a small explicit table of high-impact ATT&CK
-  techniques, not the full matrix; Phase 10 imports the real matrix and
-  replaces it. An unlisted technique scores as ordinary (0.4), never as
-  unknown-and-therefore-zero.
+- `TECHNIQUE_IMPACT` is a curated table of high-impact ATT&CK techniques,
+  not the full matrix, and it stays curated: **ATT&CK publishes no severity
+  or impact ranking**, so any weighting is a judgement someone has to make
+  and own. (An earlier note here said Phase 10 would replace it with
+  imported data; that was wrong — the import has no such data to give.)
+  What Phase 10 does add is validation: a test asserts every id in the table
+  still exists in the imported matrix and has not been revoked. An unlisted
+  technique scores as ordinary (0.4), never as unknown-and-therefore-zero.
 - `user_risk` has no producer yet — nothing computes a per-user risk score
   until UEBA exists, so the factor is absent in practice today.
 - `behavioral_anomaly` likewise: the factor and its §17 safeguards are

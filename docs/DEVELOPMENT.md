@@ -344,18 +344,42 @@ Two things to know before touching this area:
 - **Feed credentials never go in the database.** `credential_ref` names an
   environment variable; the value is read at sync time.
 
-## What's here vs. what's not (Phase 9)
+## MITRE ATT&CK coverage (Phase 10)
 
-Phases 0–9 are done: architecture, repo/infra scaffolding,
+The catalog is imported rather than shipped. For a normal install the
+default source is the official bundle over HTTPS — which means the egress
+allow-list has to permit it:
+
+```bash
+# .env
+EGRESS_ALLOWED_HOSTS=raw.githubusercontent.com
+
+curl -sX POST localhost:8000/mitre/import -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{}'
+curl -s "localhost:8000/mitre/coverage?days=30" -H "Authorization: Bearer <token>"
+```
+
+Offline (or in tests), drop the bundle in `intel-drop/` and import it by
+filename. The `feeds` worker re-imports once the catalog passes
+`MITRE_CATALOG_MAX_AGE_DAYS`.
+
+Detections are indexed into `detections-*` by the indexer worker, which now
+runs two consumers — events and detections — in one process. That is what
+makes the per-technique counts real; without it the coverage page could only
+say what rules *claim* to cover.
+
+## What's here vs. what's not (Phase 10)
+
+Phases 0–10 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
 the OpenSearch event store with enrichment, the detection engine,
-correlation, risk scoring, and threat intelligence. The pipeline runs end to end — a syslog line or REST payload
+correlation, risk scoring, threat intelligence, and ATT&CK coverage. The pipeline runs end to end — a syslog line or REST payload
 becomes an enriched, searchable, tenant-isolated document; a rule match
 becomes a detection on `detections.created`; and a sequence of those becomes
 a correlation with a timeline on `correlations.created`.
 
-Everything is enriched, scored and correlated, but nothing yet becomes an
-alert an analyst works: ATT&CK coverage is Phase 10 and the alert lifecycle
-is Phase 11. The frontend still shows only the Phase 1
+Everything is enriched, scored, correlated and mapped to ATT&CK — but
+nothing yet becomes an alert an analyst works. That is Phase 11, and
+incidents are Phase 12. The frontend still shows only the Phase 1
 placeholder page; SOC screens are Phase 14. See
 `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

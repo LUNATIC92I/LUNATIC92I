@@ -37,11 +37,16 @@ IOC_CLASSIFICATION_VALUES = {
     "benign": 0.0,
 }
 
-# Provisional impact weighting per ATT&CK technique, keyed by technique id
-# (a sub-technique inherits its parent's weight). This is a small, explicit
-# table rather than a guess across all of ATT&CK: Phase 10 imports the real
-# matrix and replaces it, and until then a technique that is not listed
-# scores as ordinary rather than as unknown-and-therefore-zero.
+# Impact weighting per ATT&CK technique, keyed by technique id (a
+# sub-technique inherits its parent's weight). This stays a curated table
+# after the Phase 10 import, for a simple reason: **ATT&CK does not publish
+# a severity or impact ranking**. It describes what adversaries do, not how
+# much it should worry you, so any weighting is a judgement someone has to
+# make and be accountable for. What the imported catalog does give is
+# validation — a test asserts every id here still exists in the real matrix,
+# so this table cannot quietly reference a technique MITRE has withdrawn.
+# A technique not listed scores as ordinary, never as
+# unknown-and-therefore-zero.
 TECHNIQUE_IMPACT: dict[str, float] = {
     "T1003": 1.0,  # OS credential dumping — one host becomes the domain
     "T1486": 1.0,  # data encrypted for impact (ransomware)

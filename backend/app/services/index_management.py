@@ -32,10 +32,12 @@ INDEX_VERSION = "v1"
 RAW_ALIAS = "events-raw-write"
 NORMALIZED_ALIAS = "events-normalized-write"
 DEADLETTER_ALIAS = "deadletter-write"
+DETECTION_ALIAS = "detections-write"
 
 RAW_PATTERN = f"lunatic-events-raw-{INDEX_VERSION}-*"
 NORMALIZED_PATTERN = f"lunatic-events-normalized-{INDEX_VERSION}-*"
 DEADLETTER_PATTERN = f"lunatic-deadletter-{INDEX_VERSION}-*"
+DETECTION_PATTERN = f"lunatic-detections-{INDEX_VERSION}-*"
 
 _KEYWORD = {"type": "keyword"}
 _KEYWORD_LONG = {"type": "keyword", "ignore_above": 4096}
@@ -158,6 +160,43 @@ def _raw_mapping() -> dict[str, Any]:
     }
 
 
+def detection_mapping() -> dict[str, Any]:
+    """Detections are stored, not just published (Phase 10).
+
+    Coverage has to answer "how many detections did this technique actually
+    produce?", and Phase 11's alerts need something to point back at. A
+    detection published to the bus and nowhere else can answer neither, so
+    it is indexed alongside the events it cites.
+    """
+    return {
+        "dynamic": "false",
+        "properties": {
+            "detection_id": _KEYWORD,
+            "tenant_id": _KEYWORD,
+            "rule_id": _KEYWORD,
+            "rule_name": _KEYWORD,
+            "rule_type": _KEYWORD,
+            "severity": _KEYWORD,
+            "confidence": {"type": "integer"},
+            "risk_score": {"type": "integer"},
+            "rule_risk_score": {"type": "integer"},
+            "risk_bucket": _KEYWORD,
+            # The join key for every ATT&CK coverage aggregation.
+            "mitre_attack": _KEYWORD,
+            "event_ids": _KEYWORD,
+            "matched_at": {"type": "date"},
+            "dry_run": {"type": "boolean"},
+            # A rendered form of the entity ("user.name=alice|source_ip=..."),
+            # because the entity's own keys differ per rule and a dynamic
+            # object here would blow the field limit.
+            "entity_summary": _KEYWORD_LONG,
+            "entity": {"type": "object", "enabled": False},
+            "evidence": {"type": "object", "enabled": False},
+            "risk_explanation": {"type": "object", "enabled": False},
+        },
+    }
+
+
 def _deadletter_mapping() -> dict[str, Any]:
     return {
         "dynamic": "false",
@@ -250,6 +289,18 @@ async def bootstrap_indices(client: AsyncOpenSearch) -> None:
             _deadletter_mapping(),
             1,
             settings.opensearch_deadletter_retention_days,
+            30,
+        ),
+        (
+            "lunatic-detections",
+            DETECTION_PATTERN,
+            DETECTION_ALIAS,
+            detection_mapping(),
+            1,
+            # Detections outlive the events behind them on purpose: an
+            # investigation months later needs to know a rule fired even
+            # once the raw event has aged out.
+            settings.opensearch_detection_retention_days,
             30,
         ),
     )

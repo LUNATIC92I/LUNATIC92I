@@ -11,32 +11,32 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 9 complete — Threat Intelligence
+## Status: PHASE 10 complete — MITRE ATT&CK coverage
 
-Phases 0–8 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
+Phases 0–9 are done (architecture, scaffolding, auth/RBAC/multi-tenancy,
 ingestion, OCSF normalization, event store, detection, correlation, risk
-scoring) are done. Phase 9 gives the risk engine's threat-intel factor a
-real producer: IOC management for all ten types in spec §11 with
-confidence, source, tags, expiry and per-field history; pluggable feed
-connectors; and indicator matching inside the enrichment pipeline, so a
-detection on a known-bad address now outranks the same detection on an
-unknown one. Full reference:
-[`docs/THREAT_INTELLIGENCE.md`](docs/THREAT_INTELLIGENCE.md).
+scoring, threat intelligence). Phase 10 answers the question a SOC manager
+actually asks: *what can we detect, and what can we not?*
 
-Spec §11's rule — *an indicator is never automatically malicious just
-because a feed said so* — is enforced in four independent places: a database
-constraint refusing a malicious verdict with no source, a parser that
-attaches no verdict to a bare blocklist, an upsert that never upgrades a
-classification on re-seeing an indicator, and the risk engine scaling each
-match by its own recorded confidence.
+The ATT&CK catalog is **imported, never hardcoded** — the official STIX
+bundle (verified against the real v19.2 release: 15 tactics, 858 techniques,
+zero rejected objects) over HTTPS through the egress guard, or from a file
+for air-gapped installs, re-imported automatically once stale. Imports are
+idempotent, audit-logged, and validate third-party content before storing
+it: bounded sizes, shape-checked ids, stripped control characters, rejected
+objects counted rather than silently dropped.
 
-Outbound requests now go through an egress guard (THREAT_MODEL.md §3.8):
-HTTPS only, a fail-closed host allow-list, every resolved address checked
-against loopback/private/link-local ranges — 169.254.169.254 included — and
-redirects re-validated rather than followed. Its residual DNS-rebinding
-window is documented rather than claimed closed.
+Coverage is deliberately conservative, because the alternative is a page
+that flatters: a disabled rule is not coverage, a covered sub-technique does
+not cover its parent (it is reported as `partial`), revoked techniques are
+out of the denominator, and a rule claiming a technique the catalog lacks is
+surfaced as an unknown claim rather than counted. Detections are now indexed
+as well as published, so "detections per technique" and "recent detections"
+come from real data — with dry-run detections excluded, since a `testing`
+rule fires deliberately and never alerts. Full reference:
+[`docs/MITRE_MAPPING.md`](docs/MITRE_MAPPING.md).
 
-499/499 backend tests passing against real PostgreSQL, real Redis and a real
+543/543 backend tests passing against real PostgreSQL, real Redis and a real
 OpenSearch cluster with the security plugin enabled. Ruff, mypy, Bandit and
 pip-audit all clean.
 
@@ -67,7 +67,7 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 10 — MITRE ATT&CK: an import/update mechanism for tactics, techniques
-and sub-techniques (not a hardcoded table), `rule_mitre_map` populated from
-the Phase 6 rules, and the coverage API — techniques covered and not
-covered, detections per technique, coverage rate.
+Phase 11 — Alerts: the full lifecycle (NEW → IN_PROGRESS → ESCALATED →
+FALSE_POSITIVE/RESOLVED → CLOSED), deduplication and suppression on a
+`dedup_key`, and evidence linkage back to the OpenSearch documents behind
+every alert.

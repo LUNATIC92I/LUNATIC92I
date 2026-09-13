@@ -75,6 +75,10 @@ async def test_bootstrap_is_idempotent(opensearch: AsyncOpenSearch) -> None:
         "lunatic-events-raw-template",
         "lunatic-events-normalized-template",
         "lunatic-deadletter-template",
+        # Detections are stored as well as published (Phase 10): one that
+        # exists only as a message on a topic cannot be counted per ATT&CK
+        # technique, or pointed at by an alert.
+        "lunatic-detections-template",
     }
 
 

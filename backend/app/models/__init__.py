@@ -18,4 +18,11 @@ from app.models.identity import (  # noqa: F401
     User,
     UserRole,
 )
+from app.models.mitre import (  # noqa: F401
+    MitreImport,
+    MitreTactic,
+    MitreTechnique,
+    MitreTechniqueTactic,
+    RuleMitreMap,
+)
 from app.models.threat_intel import Ioc, IocFeed, IocHistory  # noqa: F401

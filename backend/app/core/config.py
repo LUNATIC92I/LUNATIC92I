@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     opensearch_raw_retention_days: int = 90
     opensearch_normalized_retention_days: int = 180
     opensearch_deadletter_retention_days: int = 90
+    opensearch_detection_retention_days: int = 365
 
     # --- Ingestion (Phase 3) ---
     ingest_max_payload_bytes: int = 1024 * 1024
@@ -93,6 +94,16 @@ class Settings(BaseSettings):
     # Where file-drop feeds are read from. Filenames from feed config are
     # confined to this directory (path traversal, THREAT_MODEL.md §3.8).
     threat_intel_drop_dir: str = "/app/intel-drop"
+
+    # --- MITRE ATT&CK (Phase 10) ---
+    # Where the ATT&CK STIX bundle is imported from: an HTTPS URL (subject
+    # to the egress allow-list) or a filename in the drop directory. The
+    # catalog is data, never hardcoded — see docs/MITRE_MAPPING.md.
+    mitre_attack_source: str = (
+        "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/"
+        "master/enterprise-attack/enterprise-attack.json"
+    )
+    mitre_catalog_max_age_days: int = 90
 
     @property
     def is_production(self) -> bool:

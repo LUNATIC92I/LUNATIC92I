@@ -61,6 +61,10 @@ class RuleMatch:
     dry_run: bool
     evidence: dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def entity_summary(self) -> str:
+        return "|".join(f"{key}={self.entity[key]}" for key in sorted(self.entity))
+
     def to_document(self) -> dict[str, Any]:
         return {
             "detection_id": self.detection_id,
@@ -74,6 +78,12 @@ class RuleMatch:
             "mitre_attack": list(self.mitre_attack),
             "event_ids": list(self.event_ids),
             "entity": dict(self.entity),
+            # A rendered, indexable form of the entity. The entity's own
+            # keys differ per rule, so indexing it as an object would either
+            # explode the field count or (with dynamic mapping off) be
+            # unsearchable — neither is useful for grouping detections by
+            # who or what they were about.
+            "entity_summary": self.entity_summary,
             "matched_at": self.matched_at,
             "dry_run": self.dry_run,
             "evidence": dict(self.evidence),

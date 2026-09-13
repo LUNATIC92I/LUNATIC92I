@@ -60,6 +60,13 @@ async def _clean_tables():
             text(
                 "TRUNCATE TABLE audit_logs, sessions, api_keys, user_roles, "
                 "rule_exceptions, detection_rule_versions, detection_rules, "
+                "iocs, ioc_history, ioc_feeds, "
+                # The ATT&CK catalog is global rather than tenant data, but
+                # it is still per-test state: a catalog left behind by an
+                # earlier test would make a later one's coverage numbers
+                # depend on execution order.
+                "rule_mitre_map, mitre_technique_tactics, mitre_techniques, "
+                "mitre_tactics, mitre_imports, "
                 "users, assets, organizations CASCADE"
             )
         )

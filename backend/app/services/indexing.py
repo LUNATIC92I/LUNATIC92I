@@ -37,9 +37,23 @@ class BulkIndexOutcome:
 
 
 class EventIndexer:
-    def __init__(self, client: AsyncOpenSearch, *, alias: str = NORMALIZED_ALIAS) -> None:
+    """Bulk writer for one index family.
+
+    Parameterized by alias and id field so detections (Phase 10) reuse the
+    same batching, per-item error extraction and idempotent overwrite as
+    events, rather than getting a second, subtly different writer.
+    """
+
+    def __init__(
+        self,
+        client: AsyncOpenSearch,
+        *,
+        alias: str = NORMALIZED_ALIAS,
+        id_field: str = "event_id",
+    ) -> None:
         self._client = client
         self._alias = alias
+        self._id_field = id_field
 
     async def index_batch(self, documents: list[dict[str, Any]]) -> BulkIndexOutcome:
         if not documents:
@@ -50,7 +64,9 @@ class EventIndexer:
             # The event_id is the document _id, which makes indexing
             # idempotent: a replay after a crash overwrites rather than
             # duplicating (spec §26).
-            operations.append({"index": {"_index": self._alias, "_id": document["event_id"]}})
+            operations.append(
+                {"index": {"_index": self._alias, "_id": document[self._id_field]}}
+            )
             operations.append(document)
 
         started = time.perf_counter()

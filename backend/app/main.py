@@ -8,6 +8,7 @@ from app.api.assets import router as assets_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.ingestion import router as ingestion_router
+from app.api.mitre import router as mitre_router
 from app.api.organizations import router as organizations_router
 from app.api.rules import router as rules_router
 from app.api.threat_intel import router as threat_intel_router
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(rules_router)
     app.include_router(assets_router)
     app.include_router(threat_intel_router)
+    app.include_router(mitre_router)
 
     @app.middleware("http")
     async def track_requests(request, call_next):  # type: ignore[no-untyped-def]
