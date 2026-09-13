@@ -1,0 +1,96 @@
+correlation_id: CORR-001
+name: Account takeover chain
+description: >-
+  The classic takeover sequence against one account: a brute-force burst,
+  then a successful authentication, then a privilege change — optionally
+  followed by bulk data access. Each step alone is ordinary. In that order,
+  against the same account, inside half an hour, it is an account
+  compromise being operated by hand.
+severity: critical
+confidence: 85
+risk_score: 90
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+window: 30m
+correlate_by:
+  - user.name
+ordered: true
+
+stages:
+  - name: brute_force
+    description: AUTH-001 fired for this account
+    # AUTH-001 only, deliberately: password spraying (AUTH-002) is keyed on
+    # the source address and carries no single account, so it cannot be a
+    # stage of a chain correlated by user.
+    matches: detection
+    conditions:
+      field: detection.rule_id
+      operator: equals
+      value: AUTH-001
+
+  - name: successful_login
+    description: an authentication for the same account then succeeded
+    matches: event
+    conditions:
+      all:
+        - field: class
+          operator: equals
+          value: Authentication
+        - field: authentication.outcome
+          operator: equals
+          value: success
+
+  - name: privilege_escalation
+    description: special privileges assigned, or the account added to a privileged group
+    conditions:
+      any:
+        - field: event_code
+          operator: in
+          value:
+            - "4672"
+            - "4728"
+            - "4732"
+            - "4756"
+        - field: command_line
+          operator: contains
+          value: localgroup administrators /add
+
+  - name: bulk_data_access
+    description: a large file read after the privilege change
+    # Not required: waiting for exfiltration before calling a takeover a
+    # takeover means alerting after the damage. It rides along in the
+    # timeline when it is there.
+    required: false
+    conditions:
+      field: file.size
+      operator: gt
+      value: 50000000
+
+suppression: 1h
+
+mitre_attack:
+  - T1110
+  - T1078
+  - T1098
+
+false_positive_notes: >-
+  A user who forgot their password, reset it, and was then granted access to
+  a group by an administrator reproduces this shape exactly. The
+  distinguishing questions are whether the source address of the successful
+  login matches the one that was failing, and whether a service desk ticket
+  covers the privilege change. Environments where administrators routinely
+  work under their own accounts will see this more often; correlate against
+  the change-management record before escalating.
+investigation_steps: >-
+  1. Read the timeline in order and note the source addresses: the same
+  address across all stages is one actor, different addresses may be a
+  legitimate user whose account was separately targeted.
+  2. Identify what privilege was granted and by whom.
+  3. Check what the account did after the privilege change — new sessions,
+  service creation, data access.
+  4. If unexplained, treat as an active takeover: revoke sessions, reset the
+  credential, and reverse the privilege grant before further investigation.
+references:
+  - https://attack.mitre.org/techniques/T1078/

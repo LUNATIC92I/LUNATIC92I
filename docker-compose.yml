@@ -173,6 +173,26 @@ services:
     mem_limit: 512m
     cpus: 1.0
 
+  # Correlation worker: events.normalized + detections.created ->
+  # correlations.created. Stateful in Redis, never in process memory, so a
+  # restart or a rescheduled replica does not lose an in-flight chain
+  # (docs/TECHNICAL_RISKS.md #4).
+  correlation:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.workers.correlation_worker"]
+    restart: unless-stopped
+    env_file: .env
+    networks: [app, data]
+    volumes:
+      - ./rules:/app/rules:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 1.0
+
   # Syslog collector: a separate deployable from the API so the ingestion
   # hot path never shares a failure domain with request/response traffic
   # (ARCHITECTURE.md §3). Started only when SYSLOG_TENANT_ID and an explicit

@@ -36,6 +36,7 @@ TOPIC_EVENTS_RAW = "events.raw"
 TOPIC_EVENTS_DEADLETTER = "events.raw.deadletter"
 TOPIC_EVENTS_NORMALIZED = "events.normalized"
 TOPIC_DETECTIONS_CREATED = "detections.created"
+TOPIC_CORRELATIONS_CREATED = "correlations.created"
 
 
 @dataclass(frozen=True)

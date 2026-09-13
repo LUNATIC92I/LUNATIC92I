@@ -26,6 +26,7 @@ a partial rule set nobody notices is partial.
 """
 
 import logging
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,13 @@ from app.detection.schema import DetectionRule
 logger = logging.getLogger(__name__)
 
 RULE_SUFFIXES = (".yml", ".yaml")
+
+# The correlation pack lives inside the same rules tree but is a different
+# grammar (app/correlation/schema.py), so the detection loader skips it by
+# name rather than by trying to parse it and calling the failure a skip —
+# a rule file that quietly does not load is the thing this module exists to
+# prevent.
+CORRELATION_DIRNAME = "correlation"
 
 
 class RuleLoadError(ValueError):
@@ -115,18 +123,34 @@ def _warnings_for(rule: DetectionRule, origin: str) -> list[str]:
     return warnings
 
 
-def load_rules(directory: Path) -> LoadResult:
-    """Loads every rule file under `directory`, recursively."""
+def iter_rule_files(
+    directory: Path, *, skip_dirs: Sequence[str] = ()
+) -> Iterator[tuple[str, Path]]:
+    """Yields (origin, path) for every rule file under `directory`.
+
+    Shared with the correlation loader so both packs are discovered exactly
+    the same way — one place to change if, say, a new file extension is ever
+    accepted.
+    """
+    skipped = {name.lower() for name in skip_dirs}
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in RULE_SUFFIXES:
+            continue
+        relative = path.relative_to(directory)
+        if any(part.lower() in skipped for part in relative.parts[:-1]):
+            continue
+        yield str(relative), path
+
+
+def load_rules(directory: Path, *, skip_dirs: Sequence[str] = (CORRELATION_DIRNAME,)) -> LoadResult:
+    """Loads every detection rule file under `directory`, recursively."""
     result = LoadResult()
     if not directory.exists():
         result.errors.append(f"rule directory does not exist: {directory}")
         return result
 
     seen: dict[str, str] = {}
-    for path in sorted(directory.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in RULE_SUFFIXES:
-            continue
-        origin = str(path.relative_to(directory))
+    for origin, path in iter_rule_files(directory, skip_dirs=skip_dirs):
         try:
             rule = parse_rule(path.read_text(encoding="utf-8"), origin=origin)
         except (RuleLoadError, OSError, UnicodeDecodeError) as exc:

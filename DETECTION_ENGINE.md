@@ -218,6 +218,129 @@ build if a rule is added to the pack without them.
 `windowed_rule_runs_total{rule_id,outcome}`,
 `detection_latency_seconds`.
 
+## Correlation (Phase 7)
+
+A detection rule answers "is this event bad?". A **correlation rule** answers
+"have these things happened to the same entity, close enough together, in
+this order?" — the sequence is the signal, and each step alone is a Tuesday.
+
+Correlation rules live in `rules/correlation/`, use the same condition
+grammar and the same safe loader, and are evaluated by
+`app/correlation/engine.py`. The worker
+(`python -m app.workers.correlation_worker`) consumes **both**
+`events.normalized` and `detections.created` and publishes to
+`correlations.created`.
+
+```yaml
+correlation_id: CORR-001
+name: Account takeover chain
+severity: critical
+confidence: 85
+risk_score: 90
+status: enabled
+author: LUNATIC-IT Detection Engineering
+
+window: 30m                 # max span from first to last stage (<= 24h)
+correlate_by: [user.name]   # the entity the chain is about
+ordered: true               # stages must occur in this order, by event time
+
+stages:
+  - name: brute_force
+    matches: detection      # event | detection | any (default)
+    conditions:
+      field: detection.rule_id
+      operator: equals
+      value: AUTH-001
+  - name: successful_login
+    matches: event
+    min_count: 1
+    conditions: { ... }
+  - name: bulk_data_access
+    required: false         # enriches the timeline, never gates the chain
+    conditions: { ... }
+
+suppression: 1h
+mitre_attack: [T1110, T1078, T1098]
+false_positive_notes: ...   # required
+investigation_steps: ...    # required
+```
+
+A stage matching `detection` sees the detection under `detection.*` (rule
+id, severity, risk score) with the originating event's evidence flattened
+alongside, so a stage can say either "AUTH-001 fired" or "…from an external
+address" without knowing which stream it came from. **Dry-run detections are
+never chain inputs** — a rule in `testing` status must not be able to drive
+a correlation that alerts.
+
+An input that cannot resolve every `correlate_by` field does not participate
+at all; guessing would chain unrelated activity together.
+
+### State, and surviving a restart
+
+In-flight chains live in Redis, keyed by (tenant, rule, entity), with a TTL
+equal to the rule's window (`app/correlation/state.py`). This is Technical
+Risk #4: a correlation engine holding half-finished chains in process memory
+loses them on every deploy, and a missed multi-stage detection looks exactly
+like nothing having happened. Append-and-read is a single Lua script, so two
+replicas working two stages of the same chain cannot interleave into a state
+where it completes in neither. A per-entity cap keeps one noisy entity from
+growing a key without bound; trimming is counted, because past that point
+the timeline can no longer be reconstructed in full.
+
+Completion is re-evaluated on **every** input — there is no timer that
+closes a window. A chain completes the moment the input that completes it
+arrives, including when that is the *first* stage arriving last.
+
+### Time is judged, not trusted
+
+Ordering and windowing use an **effective time**: the source's own timestamp
+when it is plausible, and the ingestion timestamp when it is not (further
+apart than `CORRELATION_MAX_CLOCK_SKEW_SECONDS`, default 900). Without that
+backstop a correlation window is evadable with a text editor — stamp the
+privilege escalation two days earlier and the chain never closes (Technical
+Risk #5).
+
+The cost is that genuinely delayed or backfilled logs correlate at ingestion
+time. Every hit records which clock it was judged on and what the source
+claimed, so a timeline never hides it, and clamping increments
+`correlation_timestamp_clamped_total`.
+
+Arrival order is never event order: a backlogged collector or a retried
+batch must not be able to break a chain that really happened.
+
+### Timelines
+
+A completed correlation carries a timeline built automatically — every hit
+in window (optional stages included), in time order, each with its stage,
+kind, event id, summary, and the clock it was judged on. Reconstructing a
+chain by hand is where most of an investigation's time goes; spec §9 asks
+for it, and it is the correlation's main deliverable to the analyst
+alongside `first_seen` / `last_seen` / `span_seconds`.
+
+### Shipped correlation rules
+
+| Rule | Chain | Entity |
+|---|---|---|
+| CORR-001 Account takeover | AUTH-001 → successful logon → privilege change (→ bulk read, optional) | `user.name` |
+| CORR-002 Credential dumping then lateral movement | WIN-003 → service installed or network logon | `hostname` |
+| CORR-003 Document execution then persistence | WIN-005 → WIN-001/WIN-002 → scheduled task, service or Run key | `hostname` |
+
+Each has the full chain as a positive test and, as negatives, the chain
+minus a required stage, out of order, and spread beyond its window
+(`backend/app/tests/test_correlation_scenarios.py`). A meta-test fails the
+build if a shipped rule has no scenario test, or if a stage references a
+detection rule id that no longer exists.
+
+### Correlation metrics
+
+`correlations_total{correlation_id,severity}`,
+`correlations_suppressed_total{correlation_id}`,
+`correlation_inputs_total{kind}`,
+`correlation_stage_hits_total{correlation_id,stage}`,
+`correlation_state_trimmed_total`,
+`correlation_timestamp_clamped_total{direction}`,
+`correlation_latency_seconds`.
+
 ## Known limits
 
 - Windowed runs overlap by design (the schedule is shorter than the window),
@@ -229,5 +352,11 @@ build if a rule is added to the pack without them.
 - A windowed match cites at most 10 event ids; `evidence.observed` carries
   the true count and `evidence.event_ids_truncated` says when the list is
   partial.
-- Multi-event *sequences* (failed logins → success → privilege escalation)
-  are correlation, not detection, and are Phase 7.
+- Correlation rules are loaded from disk at worker start; unlike detection
+  rules they have no database-backed lifecycle yet (no versioning, no
+  audited enable/disable, no API). That machinery exists for detection rules
+  and should be generalized rather than copy-pasted, which is deferred work,
+  not an oversight.
+- An optional stage that arrives *after* a chain has already completed is
+  not in the timeline the analyst first sees; suppression holds it back as a
+  second correlation. It reaches them as alert evidence in Phase 11.

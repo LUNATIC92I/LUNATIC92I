@@ -244,17 +244,48 @@ Running the detection tests needs the same real services as Phase 5 —
 `scripts/dev-services.sh` starts PostgreSQL, Redis and OpenSearch; the
 windowed rule tests index synthetic events and run real aggregations.
 
-## What's here vs. what's not (Phase 6)
+## Correlation (Phase 7)
 
-Phases 0–6 are done: architecture, repo/infra scaffolding,
+The `correlation` worker consumes `events.normalized` **and**
+`detections.created`, chains them per entity, and publishes completed chains
+to `correlations.created` with a timeline attached.
+
+```bash
+docker compose up -d correlation
+```
+
+Correlation rules are the YAML in `rules/correlation/`. They are loaded at
+worker start (unlike detection rules, they have no database lifecycle yet).
+
+Everything stateful lives in Redis, keyed by (tenant, rule, entity) with a
+TTL equal to the rule's window, so restarting or rescheduling the worker
+does not lose an in-flight chain:
+
+```bash
+redis-cli --scan --pattern 'correlation:*' | head
+redis-cli ttl 'correlation:<tenant>:CORR-001:v1:user.name=...'
+```
+
+Two behaviours to keep in mind while working on this:
+
+- **Event time, not arrival time**, decides ordering and windows — and a
+  source timestamp too far from its ingestion time is not believed at all
+  (`CORRELATION_MAX_CLOCK_SKEW_SECONDS`). Timelines record which clock each
+  step was judged on.
+- **Completion is re-checked on every input**, so a chain can complete when
+  its *first* stage finally arrives. There is no timer closing windows.
+
+## What's here vs. what's not (Phase 7)
+
+Phases 0–7 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
-the OpenSearch event store with enrichment, and the detection engine. The
-pipeline runs end to end — a syslog line or REST payload becomes an
-enriched, searchable, tenant-isolated document, and a rule match becomes a
-detection on `detections.created`.
+the OpenSearch event store with enrichment, the detection engine, and
+correlation. The pipeline runs end to end — a syslog line or REST payload
+becomes an enriched, searchable, tenant-isolated document; a rule match
+becomes a detection on `detections.created`; and a sequence of those becomes
+a correlation with a timeline on `correlations.created`.
 
-Nothing yet consumes those detections: correlating them into multi-stage
-scenarios is Phase 7, risk scoring Phase 8, and turning them into alerts an
-analyst works is Phase 11. The frontend still shows only the Phase 1
+Nothing yet consumes correlations: scoring them is Phase 8, and turning them
+into alerts an analyst works is Phase 11. The frontend still shows only the Phase 1
 placeholder page; SOC screens are Phase 14. See
 `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

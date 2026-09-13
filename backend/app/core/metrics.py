@@ -149,3 +149,50 @@ windowed_rule_runs_total = Counter(
     "Scheduled evaluations of windowed (threshold) rules",
     ["rule_id", "outcome"],
 )
+
+correlations_total = Counter(
+    "correlations_total",
+    "Multi-stage correlation rules that completed",
+    ["correlation_id", "severity"],
+)
+
+correlations_suppressed_total = Counter(
+    "correlations_suppressed_total",
+    "Completed correlations held back by the rule's suppression window",
+    ["correlation_id"],
+)
+
+correlation_inputs_total = Counter(
+    "correlation_inputs_total",
+    "Events and detections examined by the correlation engine",
+    ["kind"],
+)
+
+correlation_stage_hits_total = Counter(
+    "correlation_stage_hits_total",
+    "Inputs recorded against a correlation stage",
+    ["correlation_id", "stage"],
+)
+
+correlation_state_trimmed_total = Counter(
+    "correlation_state_trimmed_total",
+    (
+        "Stage hits dropped because one entity's state hit its cap. Non-zero "
+        "means a correlation timeline can no longer be reconstructed in full."
+    ),
+)
+
+correlation_timestamp_clamped_total = Counter(
+    "correlation_timestamp_clamped_total",
+    (
+        "Inputs whose source timestamp was too far from their ingestion time "
+        "to be believed, and were correlated on ingestion time instead "
+        "(Technical Risk #5: timestamp-manipulation evasion)."
+    ),
+    ["direction"],
+)
+
+correlation_latency_seconds = Histogram(
+    "correlation_latency_seconds",
+    "Time to evaluate one input against the full correlation rule set",
+)

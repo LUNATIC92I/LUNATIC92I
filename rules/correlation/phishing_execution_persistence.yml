@@ -1,0 +1,76 @@
+correlation_id: CORR-003
+name: Document execution followed by persistence
+description: >-
+  An Office application spawned an interpreter on a host, the interpreter
+  then pulled or decoded a payload, and persistence was established — the
+  first fifteen minutes of a commodity phishing intrusion, in order.
+severity: high
+confidence: 80
+risk_score: 85
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+window: 30m
+correlate_by:
+  - hostname
+ordered: true
+
+stages:
+  - name: document_spawned_interpreter
+    description: WIN-005 fired on this host
+    matches: detection
+    conditions:
+      field: detection.rule_id
+      operator: equals
+      value: WIN-005
+
+  - name: payload_staging
+    description: an encoded command or a download cradle followed
+    matches: detection
+    conditions:
+      field: detection.rule_id
+      operator: in
+      value:
+        - WIN-001
+        - WIN-002
+
+  - name: persistence
+    description: a service, a scheduled task, or a Run key was created
+    conditions:
+      any:
+        - field: event_code
+          operator: in
+          value:
+            - "7045"
+            - "4698"
+        - field: command_line
+          operator: contains
+          value: schtasks
+        - field: command_line
+          operator: contains
+          value: CurrentVersion\Run
+
+suppression: 1h
+
+mitre_attack:
+  - T1566
+  - T1204.002
+  - T1059.001
+  - T1547.001
+
+false_positive_notes: >-
+  Business macros that both shell out and register a scheduled task exist,
+  and packaging or software-deployment workstations can produce the whole
+  chain legitimately. Those repeat on the same hosts with the same document
+  and the same task name; identify them and except the underlying detection
+  rules with an expiry rather than disabling this correlation.
+investigation_steps: >-
+  1. Retrieve the document from the user's mail and recent files.
+  2. Decode or resolve the staged payload — the second stage's command line
+  usually names the URL or the encoded command outright.
+  3. Remove and record the persistence mechanism, then look for what it was
+  meant to start.
+  4. Search mail for other recipients of the same attachment before closing.
+references:
+  - https://attack.mitre.org/techniques/T1204/002/

@@ -11,39 +11,37 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 6 complete — Detection Engine
+## Status: PHASE 7 complete — Correlation Engine
 
-Phases 0–5 (architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy, event ingestion, parsing/OCSF normalization, the OpenSearch
-event store with enrichment) are done. Phase 6 makes the platform *detect*:
-a declarative YAML rule DSL that cannot execute code, both execution shapes
-from `ARCHITECTURE.md` §1 row 4 (a streaming evaluator per event and a
-scheduled windowed aggregator for threshold rules), exceptions, suppression
-and dry-run, per-tenant rule storage with an append-only version history and
-audited enable/disable, and the first ten Authentication and Windows rules
-enabled by default. See [`DETECTION_ENGINE.md`](DETECTION_ENGINE.md).
+Phases 0–6 (architecture, scaffolding, authentication/RBAC/multi-tenancy,
+ingestion, OCSF normalization, the OpenSearch event store, and the detection
+engine) are done. Phase 7 adds the layer that makes a sequence mean more
+than its parts: a correlation rule DSL over the same safe condition grammar,
+an engine consuming both `events.normalized` and `detections.created`,
+automatic timeline construction, and three shipped chains (account takeover,
+credential dumping → lateral movement, document execution → persistence).
 
-The pipeline now runs collector → ingest → parse → normalize → enrich →
-index → **detect**, publishing to `detections.created`. Alerts are Phase 11;
-correlation of multi-stage sequences is Phase 7. The frontend is still the
-Phase 1 placeholder. Quickstart:
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+Two risks from the Phase 0 register are closed by tests rather than by
+assertion:
 
-285/285 backend tests passing against real PostgreSQL, real Redis and a real
-OpenSearch cluster with the security plugin enabled. Per spec §29 every
-shipped rule carries positive and negative tests, and every windowed rule
-also carries exact-threshold, one-below-threshold, out-of-window,
-different-user and different-source tests — run as real aggregations against
-the cluster, with a meta-test that fails the build if a rule is added
-without them. Ruff, mypy, Bandit and pip-audit all clean.
+- **Technical Risk #4 (state lost on restart).** In-flight chains live in
+  Redis keyed by (tenant, rule, entity) with a TTL equal to the rule window;
+  append-and-read is one Lua script so replicas cannot interleave. A test
+  destroys the engine mid-chain, rebuilds it from a fresh client, and the
+  chain still completes.
+- **Technical Risk #5 (timestamp manipulation).** Ordering and windowing use
+  an effective time — the source's clock when plausible, ingestion time when
+  not. Tests back-date a stage by two days and future-date another by a
+  month; both still correlate, and a genuinely old event still falls outside
+  the window, so the backstop does not degrade into "everything correlates".
 
-Three defects the Phase 6 tests caught in Phase 6 code, all fixed: a
-privileged-login rule that matched events carrying no source address at all
-(`not (ip in private ranges)` is vacuously true when there is no ip); a
-`case_insensitive` term query that OpenSearch rejects outright on `ip`-typed
-fields, so a rule worked streaming and failed windowed; and a newly declared
-mapping field that stayed unsearchable on already-created indices until
-rollover.
+343/343 backend tests passing against real PostgreSQL, real Redis and a real
+OpenSearch cluster with the security plugin enabled. Ruff, mypy, Bandit and
+pip-audit all clean. The pipeline runs collector → ingest → parse →
+normalize → enrich → index → detect → correlate. Alerts are Phase 11; the
+frontend is still the Phase 1 placeholder. Quickstart:
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md); rule reference:
+[`DETECTION_ENGINE.md`](DETECTION_ENGINE.md).
 
 ## Phase 0 deliverables
 
@@ -72,7 +70,7 @@ rollover.
 
 ## Next step
 
-Phase 7 — Correlation Engine: multi-stage attack scenarios (failed logins →
-success → privilege escalation → exfiltration), Redis-persisted correlation
-state that survives a worker restart, and automatic timeline construction
-(see `docs/DEVELOPMENT_PLAN.md`).
+Phase 8 — Risk Engine: a versioned, explainable weighted-sum score
+(severity, confidence, asset criticality, user risk, threat intel, MITRE
+context, behavioural anomaly) with a `risk_explanation` an analyst can read
+back (see `docs/DEVELOPMENT_PLAN.md`).

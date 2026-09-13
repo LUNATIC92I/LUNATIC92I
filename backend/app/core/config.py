@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     # two runs still lands whole inside one window (see detection/windowed.py).
     detection_window_interval_seconds: int = 60
 
+    # --- Correlation engine (Phase 7) ---
+    # How far a source's own timestamp may sit from its ingestion time
+    # before the correlation engine stops believing it and uses ingestion
+    # time instead (Technical Risk #5: timestamp-manipulation evasion).
+    correlation_max_clock_skew_seconds: int = 900
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
