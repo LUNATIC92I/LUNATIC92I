@@ -103,3 +103,49 @@ index_latency_seconds = Histogram(
     "index_latency_seconds",
     "Time to write one bulk batch to OpenSearch",
 )
+
+detections_total = Counter(
+    "detections_total",
+    "Rule matches produced by the detection engine",
+    ["rule_id", "severity", "dry_run"],
+)
+
+detections_suppressed_total = Counter(
+    "detections_suppressed_total",
+    "Matches held back by a rule's suppression window (alert-fatigue control)",
+    ["rule_id"],
+)
+
+detection_exceptions_applied_total = Counter(
+    "detection_exceptions_applied_total",
+    (
+        "Matches dropped by a documented rule exception. A high value is a "
+        "coverage hole that is deliberate but must stay visible (spec §7)."
+    ),
+    ["rule_id"],
+)
+
+detection_rule_errors_total = Counter(
+    "detection_rule_errors_total",
+    "Rules that raised while evaluating and were skipped for that event",
+    ["rule_id"],
+)
+
+detection_regex_timeouts_total = Counter(
+    "detection_regex_timeouts_total",
+    (
+        "Regex conditions abandoned after exceeding their match timeout. Any "
+        "sustained value means a rule has effectively stopped detecting."
+    ),
+)
+
+detection_latency_seconds = Histogram(
+    "detection_latency_seconds",
+    "Time to evaluate the full streaming rule set against one event",
+)
+
+windowed_rule_runs_total = Counter(
+    "windowed_rule_runs_total",
+    "Scheduled evaluations of windowed (threshold) rules",
+    ["rule_id", "outcome"],
+)

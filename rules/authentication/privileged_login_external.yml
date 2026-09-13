@@ -1,0 +1,77 @@
+rule_id: AUTH-003
+name: Privileged account authenticated from a non-internal address
+description: >-
+  A successful authentication for a built-in privileged account from an
+  address outside the RFC1918/loopback ranges. Administrative accounts
+  should not be authenticating from the public internet; when they do, it is
+  either a gap in remote-access policy or an attacker using valid
+  credentials.
+severity: critical
+confidence: 70
+risk_score: 85
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: class
+      operator: equals
+      value: Authentication
+    - field: authentication.outcome
+      operator: equals
+      value: success
+    - field: user.name
+      operator: in
+      value:
+        - root
+        - admin
+        - administrator
+        - sa
+        - sysadmin
+    # Without this the `not` below would also match an event that has no
+    # source address at all (nothing is inside the private ranges), which
+    # would turn every console login into a critical alert.
+    - field: source_ip
+      operator: exists
+      value: true
+    - not:
+        any:
+          - field: source_ip
+            operator: cidr
+            value:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 127.0.0.0/8
+              - ::1/128
+              - fc00::/7
+
+suppress_by:
+  - user.name
+  - source_ip
+suppression: 1h
+
+mitre_attack:
+  - T1078
+  - T1078.003
+
+false_positive_notes: >-
+  Cloud-hosted estates legitimately administer over public addresses; if
+  yours does, the fix is to add the jump host's address range to the
+  internal list in this rule rather than to disable it. Note the rule
+  matches only when a source address is present — an event with no
+  source_ip cannot be judged and is deliberately not matched, so a log
+  source that omits the client address is a coverage gap worth closing at
+  the source.
+investigation_steps: >-
+  1. Confirm the source address is genuinely external and identify its
+  owner and geography.
+  2. Establish whether that account has ever authenticated from that
+  address or country before.
+  3. Check what the session did afterwards — new accounts, service changes,
+  data access.
+  4. If unrecognised, treat as an active compromise of a privileged account:
+  disable the session, rotate the credential, and escalate.
+references:
+  - https://attack.mitre.org/techniques/T1078/

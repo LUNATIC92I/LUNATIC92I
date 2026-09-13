@@ -1,0 +1,50 @@
+rule_id: WIN-005
+name: Office application spawned a command interpreter
+description: >-
+  Word, Excel, PowerPoint or Outlook created a shell or script host as a
+  child process. Documents do not need command interpreters; this parent to
+  child relationship is one of the most reliable indications of a
+  successful phishing document.
+severity: high
+confidence: 85
+risk_score: 80
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: process.parent_name
+      operator: matches
+      value: "(^|\\\\)(winword|excel|powerpnt|outlook|msaccess|onenote)\\.exe$"
+    - field: process.name
+      operator: matches
+      value: "(^|\\\\)(cmd|powershell|pwsh|wscript|cscript|mshta|rundll32|regsvr32|bitsadmin|certutil)\\.exe$"
+
+suppress_by:
+  - hostname
+  - user.name
+suppression: 15m
+
+mitre_attack:
+  - T1566
+  - T1204.002
+  - T1059
+
+false_positive_notes: >-
+  A small number of legitimate business macros shell out, typically to cmd
+  for a file operation, and they will be the same macro on the same set of
+  hosts every time. Except those by document or by parent with an expiry.
+  Anything spawning mshta, regsvr32, certutil or bitsadmin should not be
+  excepted — those are not what a business macro uses.
+investigation_steps: >-
+  1. Retrieve the child process command line; it usually names the payload
+  or the URL outright.
+  2. Find the document: check the user's mail and recent-files activity
+  around that timestamp.
+  3. Check for persistence created and outbound connections made after the
+  child process ran.
+  4. If the document came from outside the organisation, search mail for
+  other recipients of the same attachment.
+references:
+  - https://attack.mitre.org/techniques/T1204/002/

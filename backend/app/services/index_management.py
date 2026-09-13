@@ -55,6 +55,7 @@ def normalized_mapping() -> dict[str, Any]:
             "source_type": _KEYWORD,
             "category": _KEYWORD,
             "class": _KEYWORD,
+            "event_code": _KEYWORD,
             "severity": _KEYWORD,
             "activity": _KEYWORD,
             "actor": {
@@ -273,6 +274,7 @@ async def bootstrap_indices(client: AsyncOpenSearch) -> None:
             ),
         )
         await _ensure_write_index(client, pattern=pattern, alias=alias)
+        await _apply_mapping_to_existing(client, alias=alias, mapping=mapping)
 
     logger.info("opensearch index templates and lifecycle policies applied")
 
@@ -305,6 +307,32 @@ async def _put_ism_policy(
         logger.warning(
             "ISM plugin unavailable: index lifecycle/retention will NOT be enforced",
             extra={"policy_id": policy_id},
+        )
+
+
+async def _apply_mapping_to_existing(
+    client: AsyncOpenSearch, *, alias: str, mapping: dict[str, Any]
+) -> None:
+    """Pushes newly declared fields onto the indices that already exist.
+
+    A template only applies to indices created after it, so adding a field
+    to the mapping would otherwise leave it unindexed until the next
+    rollover — and with `dynamic: false` that means documents carrying the
+    new field are stored but silently unsearchable, which for a detection
+    rule keyed on that field is a silent coverage gap. Adding fields is a
+    permitted mapping update; changing an existing field's type is not, and
+    that case is logged loudly rather than swallowed, because it needs a
+    reindex and a human.
+    """
+    try:
+        await client.indices.put_mapping(index=alias, body=mapping)
+    except NotFoundError:
+        return  # nothing created yet; the template will cover the first index
+    except RequestError:
+        logger.exception(
+            "could not update the mapping of existing indices: an incompatible "
+            "mapping change needs a reindex",
+            extra={"alias": alias},
         )
 
 

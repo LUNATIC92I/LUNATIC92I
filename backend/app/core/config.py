@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     syslog_udp_port: int = 5514
     syslog_tcp_port: int = 5515
 
+    # --- Detection engine (Phase 6) ---
+    # Where the default rule pack lives. Rules are installed from here into
+    # a tenant once; after that the database is authoritative, so editing a
+    # file never silently overwrites a tenant's tuning.
+    detection_rules_path: str = "/app/rules"
+    detection_rule_refresh_seconds: int = 60
+    # How often windowed (threshold) rules are evaluated. Shorter than the
+    # shortest rule window on purpose: runs overlap so an attack straddling
+    # two runs still lands whole inside one window (see detection/windowed.py).
+    detection_window_interval_seconds: int = 60
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"

@@ -197,15 +197,64 @@ Running the OpenSearch tests locally needs a real cluster with the security
 plugin enabled; `scripts/dev-services.sh` starts one if `OPENSEARCH_HOME`
 points at an install (default `/opt/os`), and skips it otherwise.
 
-## What's here vs. what's not (Phase 5)
+## Detection (Phase 6)
 
-Phases 0–5 are done: architecture, repo/infra scaffolding,
+The `detection` worker consumes `events.normalized`, evaluates each tenant's
+rules, and publishes matches to `detections.created`. It runs both execution
+shapes in one process: the streaming evaluator per event, and a scheduled
+pass that runs windowed (threshold) rules as OpenSearch aggregations.
+
+```bash
+docker compose up -d detection
+```
+
+Rules come from PostgreSQL and are re-read every
+`DETECTION_RULE_REFRESH_SECONDS`, so enabling or disabling one takes effect
+without a restart. The YAML in `rules/` is the default pack, installed into
+each tenant at registration:
+
+```bash
+curl -s localhost:8000/rules -H "Authorization: Bearer <access_token>"
+
+# try a candidate rule against one event — stores nothing
+curl -sX POST localhost:8000/rules/test -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{
+    "definition_yaml": "rule_id: TEST-001\nname: t\ndescription: d\nseverity: low\nconfidence: 10\nrisk_score: 10\nauthor: me\nconditions:\n  field: user.name\n  operator: equals\n  value: mallory\nfalse_positive_notes: n\ninvestigation_steps: s\n",
+    "event": {"user": {"name": "mallory"}}
+  }'
+
+# take a noisy rule out of production (audit-logged, versioned)
+curl -sX POST localhost:8000/rules/WIN-006/status -H "Authorization: Bearer <token>" \
+  -H 'content-type: application/json' -d '{"status": "testing"}'
+```
+
+Three things worth knowing when working on this:
+
+- **A rule is data, never code.** `yaml.safe_load` only, no expression
+  language, and regex matching is bounded by a per-match timeout rather than
+  by hope. See [`DETECTION_ENGINE.md`](../DETECTION_ENGINE.md).
+- **Both paths must mean the same thing.** A condition evaluated in Python
+  and the same condition compiled to an OpenSearch query have to select the
+  same events; `matches` is rejected in windowed rules precisely because it
+  cannot make that guarantee.
+- **Every rule change is versioned and audited** in the same transaction,
+  and the history table refuses UPDATE and DELETE at the database level.
+
+Running the detection tests needs the same real services as Phase 5 —
+`scripts/dev-services.sh` starts PostgreSQL, Redis and OpenSearch; the
+windowed rule tests index synthetic events and run real aggregations.
+
+## What's here vs. what's not (Phase 6)
+
+Phases 0–6 are done: architecture, repo/infra scaffolding,
 authentication/RBAC/multi-tenancy, ingestion, parsing/OCSF normalization,
-and the OpenSearch event store with enrichment. The pipeline runs end to
-end — a syslog line or REST payload becomes an enriched, searchable,
-tenant-isolated document.
+the OpenSearch event store with enrichment, and the detection engine. The
+pipeline runs end to end — a syslog line or REST payload becomes an
+enriched, searchable, tenant-isolated document, and a rule match becomes a
+detection on `detections.created`.
 
-Nothing yet *reacts* to those events: detection rules are Phase 6,
-correlation Phase 7, risk scoring Phase 8, alerts Phase 11. The frontend
-still shows only the Phase 1 placeholder page; SOC screens are Phase 14.
-See `docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.
+Nothing yet consumes those detections: correlating them into multi-stage
+scenarios is Phase 7, risk scoring Phase 8, and turning them into alerts an
+analyst works is Phase 11. The frontend still shows only the Phase 1
+placeholder page; SOC screens are Phase 14. See
+`docs/DEVELOPMENT_PLAN.md` for each phase's acceptance criteria.

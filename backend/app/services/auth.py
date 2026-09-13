@@ -1,3 +1,5 @@
+import logging
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -21,6 +23,8 @@ from app.core.security import (
 )
 from app.models.identity import Organization, Role, User, UserRole
 from app.models.identity import Session as SessionModel
+
+logger = logging.getLogger(__name__)
 
 
 class AuthError(Exception):
@@ -102,9 +106,30 @@ async def register_organization(
             result="success",
             after_state={"email": admin_email, "role": "ORG_ADMIN"},
         )
+        await _install_default_detection_rules(db, org.id, user.id)
         await db.commit()
 
     return org, user
+
+
+async def _install_default_detection_rules(
+    db: AsyncSession, tenant_id: uuid.UUID, actor_id: uuid.UUID
+) -> None:
+    """A tenant with no detections is a tenant that sees nothing, so the
+    shipped rule pack is installed at registration rather than left as a
+    setup step someone has to remember. It is best-effort on purpose: a
+    missing or unreadable rules directory must not make it impossible to
+    create an organization, and the failure is loud in the logs and
+    recoverable through POST /rules/install-defaults."""
+    from app.services.detection_rules import install_default_rules
+
+    try:
+        await install_default_rules(db, tenant_id=tenant_id, actor_id=actor_id)
+    except Exception:  # noqa: BLE001  never block tenant creation on this
+        logger.exception(
+            "default detection rules were not installed for the new tenant",
+            extra={"tenant_id": str(tenant_id)},
+        )
 
 
 async def authenticate(

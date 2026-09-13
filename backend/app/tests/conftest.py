@@ -8,6 +8,11 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-not-for-production")
 os.environ.setdefault("MFA_ENCRYPTION_KEY", "zHb3Yy0hz3z1aFq8LZ9v5jz1E7c8n5x2b3v4c5x6y7z=")
 os.environ.setdefault("ENV", "test")
 os.environ.setdefault("MAX_FAILED_LOGIN_ATTEMPTS", "3")
+# The shipped rule pack lives at the repository root; tests exercise the real
+# install path (a new tenant gets detections immediately) rather than a stub.
+os.environ.setdefault(
+    "DETECTION_RULES_PATH", str(Path(__file__).resolve().parents[3] / "rules")
+)
 os.environ.setdefault("OPENSEARCH_URL", "https://localhost:9200")
 os.environ.setdefault("OPENSEARCH_USERNAME", "admin")
 os.environ.setdefault("OPENSEARCH_PASSWORD", "LunaticDev-Test-1!")
@@ -54,6 +59,7 @@ async def _clean_tables():
         await db.execute(
             text(
                 "TRUNCATE TABLE audit_logs, sessions, api_keys, user_roles, "
+                "rule_exceptions, detection_rule_versions, detection_rules, "
                 "users, assets, organizations CASCADE"
             )
         )

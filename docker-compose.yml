@@ -94,6 +94,12 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     networks: [public, app, data]
+    volumes:
+      # The default detection rule pack, mounted read-only: rules are
+      # configuration the API installs into a tenant, and a container that
+      # could rewrite them would be able to rewrite what the platform
+      # detects (THREAT_MODEL.md §3.4).
+      - ./rules:/app/rules:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,6 +141,31 @@ services:
     env_file: .env
     networks: [app, data]
     depends_on:
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 1.0
+
+  # Detection worker: events.normalized -> rules -> detections.created.
+  # Runs both execution shapes — the streaming evaluator on each event and
+  # the scheduled windowed (threshold) evaluator against OpenSearch. Rules
+  # come from PostgreSQL and refresh on an interval, so enabling or
+  # disabling one does not need a restart.
+  detection:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.workers.detection_worker"]
+    restart: unless-stopped
+    env_file: .env
+    networks: [app, data]
+    volumes:
+      - ./rules:/app/rules:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       opensearch:

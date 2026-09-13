@@ -1,0 +1,45 @@
+rule_id: WIN-004
+name: Windows event log cleared
+description: >-
+  The Security log (event 1102) or another Windows log (event 104) was
+  cleared. This is destruction of the evidence a SOC works from, and outside
+  of a documented maintenance action there is no benign reason for it to
+  happen on a server.
+severity: high
+confidence: 90
+risk_score: 80
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: event_code
+      operator: in
+      value:
+        - "1102"
+        - "104"
+
+suppress_by:
+  - hostname
+suppression: 10m
+
+mitre_attack:
+  - T1070
+  - T1070.001
+
+false_positive_notes: >-
+  Log clearing during a rebuild, an image-capture step, or a documented
+  maintenance window is the only routine cause; a change record should
+  exist. On workstations, some imaging tools clear logs at first boot.
+investigation_steps: >-
+  1. Identify the account that cleared the log and whether it is an
+  administrator who should be on that host at all.
+  2. Reconstruct what happened before the clear from other sources —
+  forwarded events already in this SIEM, EDR telemetry, network logs. This
+  is precisely why forwarding matters: the local log is gone, the forwarded
+  copy is not.
+  3. Treat as anti-forensics accompanying other activity and widen the
+  investigation to the whole host, not just the clearing event.
+references:
+  - https://attack.mitre.org/techniques/T1070/001/

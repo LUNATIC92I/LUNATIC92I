@@ -11,34 +11,39 @@ This is **not** a demo. Every phase below only counts as "done" once its
 tests, security review, and acceptance criteria pass — an interface existing
 in the UI is never sufficient by itself.
 
-## Status: PHASE 5 complete — OpenSearch event store
+## Status: PHASE 6 complete — Detection Engine
 
-Phases 0–4 (architecture, repo/infra scaffolding, authentication/RBAC/
-multi-tenancy, event ingestion, parsing/OCSF normalization) are done. Phase
-5 lands events in the store and makes them searchable: index templates,
-aliases and lifecycle policies bootstrapped in code; a failure-isolated
-enrichment pipeline (asset criticality, network context) that can never
-block ingestion; a bulk indexer that reports per-document rejections
-instead of treating a 200 as success; and **Document-Level Security** as
-the event-store half of tenant isolation, matching PostgreSQL RLS on the
-relational side.
+Phases 0–5 (architecture, repo/infra scaffolding, authentication/RBAC/
+multi-tenancy, event ingestion, parsing/OCSF normalization, the OpenSearch
+event store with enrichment) are done. Phase 6 makes the platform *detect*:
+a declarative YAML rule DSL that cannot execute code, both execution shapes
+from `ARCHITECTURE.md` §1 row 4 (a streaming evaluator per event and a
+scheduled windowed aggregator for threshold rules), exceptions, suppression
+and dry-run, per-tenant rule storage with an append-only version history and
+audited enable/disable, and the first ten Authentication and Windows rules
+enabled by default. See [`DETECTION_ENGINE.md`](DETECTION_ENGINE.md).
 
-The pipeline now runs end to end — collector → ingest → parse → normalize →
-enrich → indexed and queryable. Detection is Phase 6. The frontend is still
-the Phase 1 placeholder. Quickstart:
+The pipeline now runs collector → ingest → parse → normalize → enrich →
+index → **detect**, publishing to `detections.created`. Alerts are Phase 11;
+correlation of multi-stage sequences is Phase 7. The frontend is still the
+Phase 1 placeholder. Quickstart:
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
-163/163 backend tests passing against real PostgreSQL, real Redis and a
-real OpenSearch cluster with the security plugin enabled. Phase 5's tests
-are deliberately unmocked, because every claim it makes is a claim about
-server behavior: that the mapping is actually applied (`source_ip` typed as
-`ip`, so CIDR hunting works), that `dynamic: false` stores unexpected
-fields without failing ingestion, that re-indexing an event id overwrites
-rather than duplicates, that a bulk-rejected document is surfaced rather
-than silently lost, and — the isolation claim — that a tenant's reader
-issuing a `match_all` query with no filter whatsoever still sees only its
-own events, and cannot write to the index at all. Ruff, mypy, Bandit, and
-pip-audit all clean.
+285/285 backend tests passing against real PostgreSQL, real Redis and a real
+OpenSearch cluster with the security plugin enabled. Per spec §29 every
+shipped rule carries positive and negative tests, and every windowed rule
+also carries exact-threshold, one-below-threshold, out-of-window,
+different-user and different-source tests — run as real aggregations against
+the cluster, with a meta-test that fails the build if a rule is added
+without them. Ruff, mypy, Bandit and pip-audit all clean.
+
+Three defects the Phase 6 tests caught in Phase 6 code, all fixed: a
+privileged-login rule that matched events carrying no source address at all
+(`not (ip in private ranges)` is vacuously true when there is no ip); a
+`case_insensitive` term query that OpenSearch rejects outright on `ip`-typed
+fields, so a rule worked streaming and failed windowed; and a newly declared
+mapping field that stayed unsearchable on already-created indices until
+rollover.
 
 ## Phase 0 deliverables
 
@@ -67,7 +72,7 @@ pip-audit all clean.
 
 ## Next step
 
-Phase 6 — Detection Engine: the YAML rule DSL, streaming and windowed
-evaluators, and the first Authentication and Windows rule families, each
-with the positive/negative/boundary test set the plan requires (see
-`docs/DEVELOPMENT_PLAN.md`).
+Phase 7 — Correlation Engine: multi-stage attack scenarios (failed logins →
+success → privilege escalation → exfiltration), Redis-persisted correlation
+state that survives a worker restart, and automatic timeline construction
+(see `docs/DEVELOPMENT_PLAN.md`).

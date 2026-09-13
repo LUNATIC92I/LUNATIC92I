@@ -1,0 +1,58 @@
+rule_id: AUTH-001
+name: Brute force against a single account
+description: >-
+  Repeated authentication failures for one account from one source address
+  within a short window. This is the classic single-account brute force:
+  many guesses, one target. Password spraying (few guesses, many targets) is
+  the inverse and is AUTH-002 — one rule cannot see both, because the entity
+  the threshold is counted over is different.
+severity: high
+confidence: 75
+risk_score: 65
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: class
+      operator: equals
+      value: Authentication
+    - field: authentication.outcome
+      operator: equals
+      value: failure
+
+window:
+  duration: 5m
+  threshold: 5
+  group_by:
+    - user.name
+    - source_ip
+
+suppress_by:
+  - user.name
+  - source_ip
+suppression: 30m
+
+mitre_attack:
+  - T1110
+  - T1110.001
+
+false_positive_notes: >-
+  A user whose saved credential expired (mail client, mapped drive, CI job)
+  produces exactly this pattern from one address. Check whether the source
+  address is the user's own workstation and whether the failures stop after
+  a single successful login. Service accounts authenticating from a fixed
+  host are the most common benign cause and are best handled with a
+  documented, expiring rule exception rather than by raising the threshold.
+investigation_steps: >-
+  1. Pivot on source_ip to see which other accounts it touched in the same
+  window — several accounts means this is spraying, not brute force.
+  2. Check whether any authentication from that address succeeded after the
+  failures; a success closes the "did they get in" question first.
+  3. Confirm whether the source address is internal, VPN, or external, and
+  whether the account is privileged.
+  4. If a success followed, treat as a suspected account compromise: review
+  that session's activity and force a credential reset.
+references:
+  - https://attack.mitre.org/techniques/T1110/001/

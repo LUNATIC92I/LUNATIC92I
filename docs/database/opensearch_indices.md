@@ -66,6 +66,7 @@ from the OCSF object, not a parallel schema (see `ARCHITECTURE.md` §1 row 6).
         "source_type":               { "type": "keyword" },
         "category":                   { "type": "keyword" },
         "class":                       { "type": "keyword" },
+        "event_code":                   { "type": "keyword" },
         "severity":                     { "type": "keyword" },
         "activity":                      { "type": "keyword" },
         "actor": {

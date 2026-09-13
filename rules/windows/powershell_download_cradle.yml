@@ -1,0 +1,65 @@
+rule_id: WIN-002
+name: PowerShell download cradle
+description: >-
+  PowerShell command line containing the download-and-execute constructs
+  used to pull a payload straight into memory. These strings are the
+  signature of a staging step, not of ordinary administration.
+severity: high
+confidence: 70
+risk_score: 70
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: command_line
+      operator: exists
+      value: true
+    - any:
+        - field: command_line
+          operator: contains
+          value: DownloadString
+        - field: command_line
+          operator: contains
+          value: DownloadFile
+        - field: command_line
+          operator: contains
+          value: Net.WebClient
+        - field: command_line
+          operator: contains
+          value: Invoke-WebRequest
+        - field: command_line
+          operator: contains
+          value: FromBase64String
+        - field: command_line
+          operator: contains
+          value: IEX(
+        - field: command_line
+          operator: contains
+          value: Invoke-Expression
+
+suppress_by:
+  - hostname
+suppression: 15m
+
+mitre_attack:
+  - T1059.001
+  - T1105
+
+false_positive_notes: >-
+  Developer and packaging workstations use Invoke-WebRequest routinely, and
+  some vendor install scripts use Net.WebClient. Judge by the URL and by
+  whether the result is executed rather than saved: DownloadString piped
+  into Invoke-Expression is materially different from Invoke-WebRequest
+  writing an .msi to disk. Expect to tune this per environment; that is why
+  the confidence is 70 rather than 90.
+investigation_steps: >-
+  1. Extract the URL or host from the command line and check it against
+  threat intelligence and against what the estate normally talks to.
+  2. Identify the parent process and the user context.
+  3. Look for a process created, or a file written, in the seconds after.
+  4. If the destination is untrusted, contain the host and collect the
+  downloaded artefact before it is cleaned up.
+references:
+  - https://attack.mitre.org/techniques/T1105/

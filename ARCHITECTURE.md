@@ -266,6 +266,20 @@ presence compiles to a **windowed aggregation** evaluator scheduled against
 OpenSearch. Both expose the same `evaluate(event_or_bucket) -> RuleMatch |
 None` interface to the Detection Engine.
 
+Implemented in Phase 6 (`DETECTION_ENGINE.md` is the reference) with two
+deviations from this draft, both deliberate and both tested:
+
+1. **`matches` (regex) is refused in windowed rules at load time.** Python's
+   `re` and Lucene's regexp are different languages, so compiling one to the
+   other would produce a rule that selects different events depending on
+   which evaluator ran it — a silent detection gap, which is worse than an
+   unsupported operator.
+2. **Stored rules are per tenant (`detection_rules.tenant_id` NOT NULL)**,
+   where `postgresql_schema.sql` §4 allowed NULL for a shared global rule. A
+   global rule cannot be tuned, excepted or disabled by one tenant without
+   affecting all of them, and per-tenant tuning is most of what detection
+   engineering is. The shipped pack is installed per tenant instead.
+
 ### 7.3 REST API (external contract)
 
 OpenAPI-documented FastAPI app; JWT (OIDC-compatible) bearer auth; every

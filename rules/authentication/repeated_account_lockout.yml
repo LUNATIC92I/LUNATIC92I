@@ -1,0 +1,47 @@
+rule_id: AUTH-004
+name: Repeated account lockouts
+description: >-
+  One account locked out several times in half an hour (Windows Security
+  event 4740). A single lockout is routine; repeated lockouts mean something
+  is continuously presenting a wrong credential — a forgotten saved password,
+  or a guessing attempt that lockout policy is currently absorbing.
+severity: medium
+confidence: 60
+risk_score: 45
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: event_code
+      operator: equals
+      value: "4740"
+
+window:
+  duration: 30m
+  threshold: 3
+  group_by:
+    - user.name
+
+suppress_by:
+  - user.name
+suppression: 2h
+
+mitre_attack:
+  - T1110
+
+false_positive_notes: >-
+  A stale credential cached by a phone, scheduled task or mapped drive is
+  the most frequent cause and will repeat on a fixed interval. Regular
+  timing across hours points to automation; irregular bursts point at a
+  person or a tool.
+investigation_steps: >-
+  1. Identify the caller computer name in the lockout events — that is the
+  host holding the wrong credential.
+  2. Check for AUTH-001/AUTH-002 activity for the same account: lockouts
+  may be the visible half of a guessing campaign.
+  3. If the source host is not the user's own, treat the host as suspect
+  rather than the account.
+references:
+  - https://attack.mitre.org/techniques/T1110/

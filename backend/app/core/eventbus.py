@@ -35,6 +35,7 @@ def _as_bytes(value: object) -> bytes:
 TOPIC_EVENTS_RAW = "events.raw"
 TOPIC_EVENTS_DEADLETTER = "events.raw.deadletter"
 TOPIC_EVENTS_NORMALIZED = "events.normalized"
+TOPIC_DETECTIONS_CREATED = "detections.created"
 
 
 @dataclass(frozen=True)

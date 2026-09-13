@@ -1,0 +1,52 @@
+rule_id: WIN-006
+name: Windows service installed
+description: >-
+  A new Windows service was registered (event 7045) or created from the
+  command line with sc.exe. Service creation is a standard persistence and
+  lateral-movement step — it is also a standard administrative one, which is
+  why this ships enabled but with modest confidence: the value is in having
+  the record correlated with everything else on the host, not in the single
+  event.
+severity: medium
+confidence: 50
+risk_score: 45
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  any:
+    - field: event_code
+      operator: equals
+      value: "7045"
+    - all:
+        - field: process.name
+          operator: matches
+          value: "(^|\\\\)sc\\.exe$"
+        - field: command_line
+          operator: contains
+          value: create
+
+suppress_by:
+  - hostname
+suppression: 30m
+
+mitre_attack:
+  - T1543
+  - T1543.003
+
+false_positive_notes: >-
+  Software installation creates services constantly, so on a healthy estate
+  most matches are benign and this rule earns its place through correlation
+  and hunting rather than through page-worthy alerts. Consider running it in
+  testing status in environments with heavy software deployment, and
+  prioritise services whose binary path is in a user-writable directory.
+investigation_steps: >-
+  1. Read the service binary path: a path under Users, ProgramData, Temp or
+  a UNC share is far more interesting than one under Program Files.
+  2. Check whether the binary is signed and known.
+  3. Establish whether an install or change record covers the change.
+  4. Correlate with remote-logon activity on the host — a service created
+  minutes after a remote logon is lateral movement until proven otherwise.
+references:
+  - https://attack.mitre.org/techniques/T1543/003/

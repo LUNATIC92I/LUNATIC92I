@@ -142,6 +142,13 @@ def normalize(
         "source_type": source_type,
         "category": category_name,
         "class": _CLASS_NAMES[class_uid],
+        # The *source's* own identifier for the kind of event (Windows event
+        # id 4625, a CEF signature id). Named `event_code` because
+        # `event_id` is already this platform's unique id for the event
+        # itself, and a Windows rule keying on "4625" must never be able to
+        # collide with a document id. Most of the Windows detection family
+        # is unwritable without it.
+        "event_code": _event_code(parsed),
         "severity": severity,
         "activity": _activity_name(parsed, class_uid),
         "actor": {"user": user.get("name")} if user else {},
@@ -562,6 +569,18 @@ def _is_ip(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _event_code(parsed: ParsedEvent) -> str | None:
+    """Normalized as a string, deliberately: sources spell the same code as
+    `4625` and `"4625"`, and a keyword field that sometimes holds a number
+    makes every rule author guess which one to write."""
+    fields = parsed.fields
+    for key in ("event_id", "signature_id", "event_code"):
+        value = fields.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return None
 
 
 def _unmapped(parsed: ParsedEvent) -> dict[str, Any]:

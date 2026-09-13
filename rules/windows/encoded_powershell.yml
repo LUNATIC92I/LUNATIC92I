@@ -1,0 +1,55 @@
+rule_id: WIN-001
+name: PowerShell executed with an encoded command
+description: >-
+  PowerShell launched with -EncodedCommand (or any unambiguous abbreviation
+  of it) followed by a base64 blob. Encoding a command hides it from
+  casual log review and from naive string matching; it is not a feature
+  administrators reach for often, and it is used by nearly every commodity
+  loader.
+severity: high
+confidence: 80
+risk_score: 70
+status: enabled
+version: 1
+author: LUNATIC-IT Detection Engineering
+
+conditions:
+  all:
+    - field: process.name
+      operator: matches
+      # Matched against the full image path Windows reports, so this is
+      # anchored on the executable name rather than compared to it.
+      value: "(^|\\\\)(powershell|powershell_ise|pwsh)\\.exe$"
+    - field: command_line
+      # PowerShell accepts any unambiguous prefix: -e, -en, -enc, -encoded,
+      # -encodedcommand are all the same switch, and matching only the full
+      # spelling is the single most common way this detection is evaded.
+      operator: matches
+      value: "[-/]e(c|n|nc|nco|ncod|ncode|ncoded|ncodedc|ncodedco|ncodedcom|ncodedcomm|ncodedcomma|ncodedcomman|ncodedcommand)?\\s+[A-Za-z0-9+/=]{16,}"
+
+suppress_by:
+  - hostname
+  - process.name
+suppression: 15m
+
+mitre_attack:
+  - T1059.001
+  - T1027
+
+false_positive_notes: >-
+  Some management products (configuration management agents, backup
+  software, a few installers) legitimately invoke encoded PowerShell. These
+  are recognisable because they repeat from the same parent process on many
+  hosts; except them by parent process with an expiry rather than by
+  disabling the rule. Decoding the blob is what settles any individual case.
+investigation_steps: >-
+  1. Decode the base64 payload (it is UTF-16LE) and read the actual command
+  before anything else — everything else follows from what it does.
+  2. Identify the parent process; a browser, Office application or script
+  host as parent is far more serious than a management agent.
+  3. Check the host for outbound connections made in the minutes after
+  execution.
+  4. If the decoded command downloads or injects, treat the host as
+  compromised and move to containment.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/

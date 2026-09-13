@@ -3,6 +3,11 @@
 # app.core.db.Base.metadata before Alembic autogenerate runs.
 from app.models.assets import Asset  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
+from app.models.detection import (  # noqa: F401
+    DetectionRuleRecord,
+    DetectionRuleVersion,
+    RuleExceptionRecord,
+)
 from app.models.identity import (  # noqa: F401
     ApiKey,
     Organization,
