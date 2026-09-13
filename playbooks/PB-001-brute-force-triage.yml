@@ -1,0 +1,20 @@
+key: PB-001
+name: Brute Force Triage
+description: >-
+  Enriches the source address of a brute-force alert, checks it against
+  known indicators, computes a local reputation score from that, and opens
+  an incident with the findings — the full non-destructive chain (spec
+  §18's example: brute force -> enrich -> IOC check -> reputation ->
+  incident -> notify). No step here is destructive, so this playbook never
+  needs approval and always runs to completion in one call.
+trigger_type: alert
+steps:
+  - action: enrich_ip
+  - action: check_ioc
+  - action: calculate_reputation
+  - action: create_incident
+    params:
+      severity: high
+  - action: notify_analyst
+    params:
+      message: Brute force triage completed — see the incident for findings.

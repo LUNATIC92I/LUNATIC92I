@@ -1,0 +1,12 @@
+key: PB-002
+name: Contain Compromised Account
+description: >-
+  Looks up the alert's affected account, then disables it. `disable_user`
+  is destructive (ARCHITECTURE.md §7.5): a run of this playbook halts at
+  that step with AWAITING_APPROVAL and does nothing further until a second
+  person — never the analyst who started the run — approves it
+  (THREAT_MODEL.md §3.6's dual control).
+trigger_type: alert
+steps:
+  - action: enrich_user
+  - action: disable_user

@@ -43,4 +43,9 @@ from app.models.mitre import (  # noqa: F401
     MitreTechniqueTactic,
     RuleMitreMap,
 )
+from app.models.playbooks import (  # noqa: F401
+    Playbook,
+    PlaybookActionApproval,
+    PlaybookRun,
+)
 from app.models.threat_intel import Ioc, IocFeed, IocHistory  # noqa: F401

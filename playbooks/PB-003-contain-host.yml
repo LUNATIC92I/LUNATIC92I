@@ -1,0 +1,12 @@
+key: PB-003
+name: Contain Host
+description: >-
+  Looks up the alert's affected host, then marks it contained.
+  `isolate_host` is destructive and, like `disable_user`, halts the run at
+  AWAITING_APPROVAL until a second person approves it. This is the SIEM's
+  own record of containment (`Asset.is_isolated`) — see docs/PLAYBOOKS.md
+  for why that is not the same as a live firewall/EDR isolation signal.
+trigger_type: alert
+steps:
+  - action: enrich_host
+  - action: isolate_host

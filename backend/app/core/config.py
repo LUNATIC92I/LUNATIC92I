@@ -131,6 +131,12 @@ class Settings(BaseSettings):
     hunt_export_max_rows: int = 10_000
     hunt_export_rate_limit_per_hour: int = 20
 
+    # --- SOAR playbooks (Phase 15) ---
+    # Where the shipped playbook pack lives, mirroring
+    # DETECTION_RULES_PATH: installed into a tenant once at registration,
+    # after that the database is authoritative.
+    playbooks_path: str = "/app/playbooks"
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"

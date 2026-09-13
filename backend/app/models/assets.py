@@ -48,6 +48,13 @@ class Asset(Base):
     environment: Mapped[str | None] = mapped_column(String, nullable=True)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # The SIEM's own record of network containment, set by the `isolate_host`
+    # playbook action (Phase 15). This is the platform's record that
+    # isolation was ordered and approved — not a live signal from a
+    # firewall/EDR, which no integration in this codebase actually drives;
+    # see docs/PLAYBOOKS.md for why that boundary is drawn here.
+    is_isolated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    isolated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

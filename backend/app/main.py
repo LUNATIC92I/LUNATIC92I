@@ -15,6 +15,7 @@ from app.api.incidents import router as incidents_router
 from app.api.ingestion import router as ingestion_router
 from app.api.mitre import router as mitre_router
 from app.api.organizations import router as organizations_router
+from app.api.playbooks import router as playbooks_router
 from app.api.rules import router as rules_router
 from app.api.threat_intel import router as threat_intel_router
 from app.api.users import router as users_router
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(incidents_router)
     app.include_router(hunting_router)
     app.include_router(audit_router)
+    app.include_router(playbooks_router)
 
     @app.middleware("http")
     async def track_requests(request, call_next):  # type: ignore[no-untyped-def]

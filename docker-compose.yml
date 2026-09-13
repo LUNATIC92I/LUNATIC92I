@@ -100,6 +100,11 @@ services:
       # could rewrite them would be able to rewrite what the platform
       # detects (THREAT_MODEL.md §3.4).
       - ./rules:/app/rules:ro
+      # Same reasoning for the shipped SOAR playbook pack (Phase 15): a
+      # playbook step names a registered action, never arbitrary code, but
+      # a writable mount would still let a compromised container plant a
+      # destructive step into every new tenant's pack.
+      - ./playbooks:/app/playbooks:ro
     depends_on:
       postgres:
         condition: service_healthy

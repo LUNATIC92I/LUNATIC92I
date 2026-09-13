@@ -13,6 +13,11 @@ os.environ.setdefault("MAX_FAILED_LOGIN_ATTEMPTS", "3")
 os.environ.setdefault(
     "DETECTION_RULES_PATH", str(Path(__file__).resolve().parents[3] / "rules")
 )
+# Same reasoning for the shipped SOAR playbook pack: exercise the real
+# install-at-registration path rather than a stub directory.
+os.environ.setdefault(
+    "PLAYBOOKS_PATH", str(Path(__file__).resolve().parents[3] / "playbooks")
+)
 os.environ.setdefault("OPENSEARCH_URL", "https://localhost:9200")
 os.environ.setdefault("OPENSEARCH_USERNAME", "admin")
 os.environ.setdefault("OPENSEARCH_PASSWORD", "LunaticDev-Test-1!")

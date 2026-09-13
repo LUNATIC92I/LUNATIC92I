@@ -107,6 +107,7 @@ async def register_organization(
             after_state={"email": admin_email, "role": "ORG_ADMIN"},
         )
         await _install_default_detection_rules(db, org.id, user.id)
+        await _install_default_playbooks(db, org.id, user.id)
         await db.commit()
 
     return org, user
@@ -128,6 +129,22 @@ async def _install_default_detection_rules(
     except Exception:  # noqa: BLE001  never block tenant creation on this
         logger.exception(
             "default detection rules were not installed for the new tenant",
+            extra={"tenant_id": str(tenant_id)},
+        )
+
+
+async def _install_default_playbooks(
+    db: AsyncSession, tenant_id: uuid.UUID, actor_id: uuid.UUID
+) -> None:
+    """Same reasoning and the same best-effort shape as the detection rule
+    pack above: recoverable through POST /playbooks/install-defaults."""
+    from app.services.playbooks import install_default_playbooks
+
+    try:
+        await install_default_playbooks(db, tenant_id=tenant_id, actor_id=actor_id)
+    except Exception:  # noqa: BLE001  never block tenant creation on this
+        logger.exception(
+            "default playbooks were not installed for the new tenant",
             extra={"tenant_id": str(tenant_id)},
         )
 
