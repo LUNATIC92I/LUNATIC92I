@@ -54,6 +54,12 @@ dev = [
     "types-PyYAML>=6.0,<7.0",
     "types-regex>=2026.9,<2027.0",
 ]
+# Separate from `dev`: the load-testing harness (Phase 18, spec §24) pulls
+# in a fair amount (gevent, flask, ...) that ordinary development, linting
+# and the unit/integration suite never need.
+perf = [
+    "locust>=2.46,<3.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

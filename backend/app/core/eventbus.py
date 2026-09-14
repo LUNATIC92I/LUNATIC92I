@@ -95,16 +95,36 @@ class EventBus(abc.ABC):
         return None
 
 
+_SUBSCRIBE_BLOCK_MS = 5000
+
+
 class RedisStreamsEventBus(EventBus):
     """Note on typing: this client is constructed with
     `decode_responses=False`, so every value redis-py hands back is `bytes`.
     redis-py's annotations cannot express that (they return broad
     `bytes | str | None` unions covering both decode modes), so the reads
     below normalize through `_as_bytes`, which raises rather than guesses if
-    the runtime shape is ever not what we configured for."""
+    the runtime shape is ever not what we configured for.
+
+    `socket_timeout` is set explicitly, wider than `_SUBSCRIBE_BLOCK_MS`
+    (Phase 18 load testing found this the hard way): recent redis-py
+    versions apply their own default *client-side* read timeout of 5
+    seconds independent of any `block=` argument passed to a blocking
+    command. `subscribe()`'s `XREADGROUP ... BLOCK 5000` asks the *server*
+    to hold the connection open for up to 5s waiting for new messages —
+    with no override here, redis-py would tear the connection down from
+    the client side at almost exactly the same instant, so every quiet
+    period of 5+ seconds with no new events (any night, any weekend) would
+    crash every worker with an unhandled `redis.exceptions.TimeoutError`.
+    Nothing about that is specific to a slow network; it reproduces on a
+    bare loopback connection to a healthy Redis with no messages pending."""
 
     def __init__(self, redis_url: str) -> None:
-        self._redis: aioredis.Redis = aioredis.from_url(redis_url, decode_responses=False)
+        self._redis: aioredis.Redis = aioredis.from_url(
+            redis_url,
+            decode_responses=False,
+            socket_timeout=(_SUBSCRIBE_BLOCK_MS / 1000) + 5,
+        )
 
     async def publish(self, topic: str, message: EventBusMessage) -> str:
         message_id = await self._redis.xadd(
@@ -132,7 +152,9 @@ class RedisStreamsEventBus(EventBus):
         while True:
             response = cast(
                 list[tuple[object, list[tuple[object, object]]]],
-                await self._redis.xreadgroup(group, consumer, {topic: ">"}, count=10, block=5000),
+                await self._redis.xreadgroup(
+                    group, consumer, {topic: ">"}, count=10, block=_SUBSCRIBE_BLOCK_MS
+                ),
             )
             if not response:
                 continue
