@@ -1,0 +1,139 @@
+# Detection worker: events.normalized -> rules -> detections.created. Runs
+# both execution shapes in one process (app/workers/detection_worker.py):
+# the streaming evaluator, safe to scale via the Redis Streams consumer
+# group exactly like the parser worker; and the windowed (threshold)
+# scheduler, which every replica runs independently against ALL active
+# tenants on its own timer. That second path is *also* safe to scale
+# horizontally, but for a different reason: every windowed rule in the
+# shipped pack sets `suppression_seconds > 0`
+# (rules/authentication/{brute_force,password_spraying,repeated_account_lockout}.yml),
+# so when two replicas evaluate the same tenant's window in the same
+# instant and get the same match, only the replica that wins the atomic
+# Redis suppression claim (app/detection/windowed.py) publishes it — the
+# other is suppressed, not duplicated. A custom windowed rule added later
+# MUST set a suppression window for this guarantee to hold; one with
+# suppression_seconds == 0 would double-fire under >1 replica.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: detection
+  namespace: lunatic-siem
+  labels:
+    app.kubernetes.io/name: detection
+    app.kubernetes.io/part-of: lunatic-siem
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: detection
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: detection
+        app.kubernetes.io/part-of: lunatic-siem
+    spec:
+      serviceAccountName: lunatic-backend
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: detection
+          image: lunatic-siem-backend:latest
+          command: ["python", "-m", "app.workers.detection_worker"]
+          ports:
+            - name: metrics
+              containerPort: 9100
+          envFrom:
+            - configMapRef:
+                name: lunatic-config
+            - secretRef:
+                name: lunatic-secrets
+          volumeMounts:
+            - name: rules-authentication
+              mountPath: /app/rules/authentication
+              readOnly: true
+            - name: rules-correlation
+              mountPath: /app/rules/correlation
+              readOnly: true
+            - name: rules-windows
+              mountPath: /app/rules/windows
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: rules-authentication
+          configMap:
+            name: rules-authentication
+        - name: rules-correlation
+          configMap:
+            name: rules-correlation
+        - name: rules-windows
+          configMap:
+            name: rules-windows
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: detection
+  namespace: lunatic-siem
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: detection
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: detection
+  namespace: lunatic-siem
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: detection
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

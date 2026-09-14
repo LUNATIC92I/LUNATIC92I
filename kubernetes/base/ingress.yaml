@@ -1,0 +1,38 @@
+# Assumes an ingress-nginx-compatible controller is already installed in
+# the cluster (any conformant Ingress controller works; annotations here
+# are the ingress-nginx spelling — adjust if using a different one).
+# TLS termination and the actual hostnames are environment-specific, so
+# this base leaves `tls:` and the two example hosts for an overlay to set.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lunatic-siem
+  namespace: lunatic-siem
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # The API validates its own CORS origin (app/main.py) — the ingress
+    # layer is not a second, conflicting CORS implementation.
+    nginx.ingress.kubernetes.io/proxy-body-size: 2m
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.lunatic-siem.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
+    - host: api.lunatic-siem.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  name: http

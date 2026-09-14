@@ -1,0 +1,86 @@
+# Redis HA via the Bitnami redis Helm chart's built-in Sentinel mode —
+# real, load-bearing production topology (automatic master election,
+# replica promotion on failure), not something worth hand-rolling when a
+# well-established chart already does it correctly.
+#
+# Install:
+#   helm repo add bitnami https://charts.bitnami.com/bitnami
+#   helm install redis bitnami/redis -n lunatic-data \
+#     -f kubernetes/data-tier/values-redis-ha.yaml
+#
+# IMPORTANT — read before relying on this for automatic failover:
+# `RedisStreamsEventBus` (backend/app/core/eventbus.py) connects with a
+# single static `redis://` URL via `redis.asyncio.from_url()`. That client
+# does NOT speak the Sentinel discovery protocol, so it has no way to
+# learn that the master moved after a failover — it keeps retrying the
+# address it was given. Sentinel mode here still buys you: (1) automatic
+# promotion, so manual intervention is never required to recover, and (2)
+# the `redis-sentinel` Sentinel Service correctly answers "who is the
+# master right now" for anything that does speak the protocol (redis-cli
+# -h redis-sentinel sentinel get-master-addr-by-name mymaster). To make
+# `RedisStreamsEventBus` itself follow a failover automatically — closing
+# the gap rather than just working around it — either:
+#   (a) front this with a small TCP proxy that continuously points at
+#       whichever node Sentinel currently reports as master (haproxy with
+#       a redis-aware health check is the standard pattern), and point
+#       REDIS_URL at the proxy instead of a Redis pod directly; or
+#   (b) change RedisStreamsEventBus to build its client via redis-py's own
+#       `Sentinel` class (`Sentinel(...).master_for("mymaster")`) instead
+#       of a bare `from_url()`, which is a small, contained code change
+#       but a real one — tracked as follow-up work for this phase, not
+#       silently assumed to already work.
+architecture: replication
+auth:
+  enabled: true
+  existingSecret: redis-auth
+  existingSecretPasswordKey: password
+
+sentinel:
+  enabled: true
+  masterSet: mymaster
+  quorum: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+replica:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 8Gi
+  # Never 2 of the 3 data-bearing pods (1 former-master-turned-replica +
+  # 2 replicas, across the StatefulSet) on the same node — the whole
+  # point of replication is surviving a single node's failure.
+  podAntiAffinityPreset: hard
+
+master:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 8Gi
+
+networkPolicy:
+  # kubernetes/data-tier/networkpolicy.yaml already covers this namespace
+  # with its own default-deny + explicit allows; avoid a second,
+  # potentially conflicting set of NetworkPolicy objects from the chart.
+  enabled: false
+
+metrics:
+  enabled: true

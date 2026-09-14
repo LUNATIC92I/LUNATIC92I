@@ -1,0 +1,123 @@
+# Correlation worker: events.normalized + detections.created ->
+# correlations.created. State lives in Redis (TTL'd, restart-safe), never
+# in process memory, so a rescheduled replica never loses an in-flight
+# multi-stage chain (docs/TECHNICAL_RISKS.md #4). Scales the same way as
+# parser/indexer/detection: one shared Redis Streams consumer group per
+# topic (CONSUMER_GROUP = "correlation").
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: correlation
+  namespace: lunatic-siem
+  labels:
+    app.kubernetes.io/name: correlation
+    app.kubernetes.io/part-of: lunatic-siem
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: correlation
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: correlation
+        app.kubernetes.io/part-of: lunatic-siem
+    spec:
+      serviceAccountName: lunatic-backend
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: correlation
+          image: lunatic-siem-backend:latest
+          command: ["python", "-m", "app.workers.correlation_worker"]
+          ports:
+            - name: metrics
+              containerPort: 9100
+          envFrom:
+            - configMapRef:
+                name: lunatic-config
+            - secretRef:
+                name: lunatic-secrets
+          volumeMounts:
+            # Only the correlation subtree: app/correlation/loader.py reads
+            # exclusively from `rules_root/correlation/`
+            # (correlation_directory() in that file) — the authentication/
+            # windows rule families are the detection worker's concern, not
+            # this one's.
+            - name: rules-correlation
+              mountPath: /app/rules/correlation
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: rules-correlation
+          configMap:
+            name: rules-correlation
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: correlation
+  namespace: lunatic-siem
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: correlation
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: correlation
+  namespace: lunatic-siem
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: correlation
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

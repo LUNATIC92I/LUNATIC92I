@@ -1,0 +1,111 @@
+# Alert worker: detections.created + correlations.created -> alerts.
+# Consumer-group scaled like the other pipeline workers (CONSUMER_GROUP =
+# "alerting"). Deliberately separate from the detection worker so the
+# analyst-facing alert queue is never coupled to rule-evaluation
+# throughput — either can be scaled, restarted or paused independently.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerting
+  namespace: lunatic-siem
+  labels:
+    app.kubernetes.io/name: alerting
+    app.kubernetes.io/part-of: lunatic-siem
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alerting
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alerting
+        app.kubernetes.io/part-of: lunatic-siem
+    spec:
+      serviceAccountName: lunatic-backend
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: alerting
+          image: lunatic-siem-backend:latest
+          command: ["python", "-m", "app.workers.alert_worker"]
+          ports:
+            - name: metrics
+              containerPort: 9100
+          envFrom:
+            - configMapRef:
+                name: lunatic-config
+            - secretRef:
+                name: lunatic-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: alerting
+  namespace: lunatic-siem
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alerting
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: alerting
+  namespace: lunatic-siem
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: alerting
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

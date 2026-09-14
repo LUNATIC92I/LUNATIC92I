@@ -1,0 +1,80 @@
+# Mirror of kubernetes/base/networkpolicy.yaml's `allow-egress-to-data-tier`
+# rule, enforced from the data side: default-deny everything in this
+# namespace, then allow ingress only from pods in `lunatic-siem` carrying
+# the app tier's own `part-of` label — never from anywhere else, and
+# never initiated by the data tier itself (THREAT_MODEL.md §1).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: lunatic-data
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-app-tier
+  namespace: lunatic-data
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: lunatic-siem
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: lunatic-siem
+      ports:
+        - port: 5432
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 26379
+          protocol: TCP
+        - port: 9200
+          protocol: TCP
+---
+# Intra-tier traffic the data services need among themselves: PostgreSQL
+# streaming replication, Redis/Sentinel gossip, OpenSearch's own cluster
+# transport port (9300) between nodes. Scoped to the namespace's own pods
+# only, never to the app tier or the internet.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-data-tier
+  namespace: lunatic-data
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: lunatic-data
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: lunatic-data
+---
+# DNS, same reasoning as the app tier's own allow-dns-egress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: lunatic-data
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

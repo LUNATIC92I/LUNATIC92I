@@ -1,0 +1,63 @@
+# OpenSearch cluster via the official opensearch Helm chart
+# (https://opensearch.org/docs/latest/install-and-configure/install-opensearch/helm/).
+# 3 master-eligible data nodes: enough for the cluster to survive one node
+# failure without losing its ability to elect a new cluster manager
+# (OpenSearch/Elasticsearch quorum needs a majority of master-eligible
+# nodes; 3 tolerates 1 down, 2 would tolerate none).
+#
+# Install:
+#   helm repo add opensearch https://opensearch-project.github.io/helm-charts
+#   helm install opensearch opensearch/opensearch -n lunatic-data \
+#     -f kubernetes/data-tier/values-opensearch-ha.yaml
+#
+# The Service this chart creates is named `opensearch-cluster-master` by
+# default — kubernetes/base/configmap.yaml's OPENSEARCH_URL and this
+# chart's `clusterName`/fullname must stay in sync; adjust one or the
+# other to match your release name.
+clusterName: opensearch
+nodeGroup: cluster-manager
+
+replicas: 3
+
+roles:
+  - master
+  - data
+  - ingest
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+# Half of the container memory limit, matching the resources.limits.memory
+# above — the standard OpenSearch/Elasticsearch guidance to leave the
+# other half for the OS page cache and off-heap memory.
+extraEnvs:
+  - name: OPENSEARCH_JAVA_OPTS
+    value: "-Xms2g -Xmx2g"
+
+persistence:
+  enabled: true
+  size: 100Gi
+
+antiAffinity: hard
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# TLS between nodes and on the HTTP layer — this platform's own
+# OPENSEARCH_VERIFY_CERTS must be true against this cluster (the `false`
+# value in .env.example is explicitly local-development-only, see that
+# file's own comment). Point at real, CA-issued certificates per
+# environment; this base intentionally does not ship demo certs.
+security:
+  enabled: true
+  config:
+    securityConfigSecret: opensearch-security-config
+
+networkPolicy:
+  create: false # covered by kubernetes/data-tier/networkpolicy.yaml

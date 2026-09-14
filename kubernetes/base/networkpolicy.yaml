@@ -1,0 +1,146 @@
+# Enforces the trust boundary from THREAT_MODEL.md §1: the app tier may
+# reach the data tier; nothing else may reach the data tier at all; the
+# data tier never initiates its own egress. Default-deny everything in
+# this namespace first, then punch the specific holes the platform
+# actually needs — never the other way around.
+#
+# The data tier itself (PostgreSQL/Redis/OpenSearch) lives in a separate
+# `lunatic-data` namespace (see kubernetes/data-tier/) specifically so
+# "app tier -> data tier" can be expressed as a namespace-scoped policy
+# rather than trying to keep pod-label selectors in sync with whatever
+# labels each data-tier Helm chart happens to apply.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: lunatic-siem
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+# DNS resolution is table stakes for every pod (resolving the data-tier
+# Services, the OTLP collector, egress-guarded feed hostnames) — without
+# this, default-deny-all above would silently break every one of them.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: lunatic-siem
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Ingress to the API from outside the cluster, via whatever fronts it
+# (Ingress controller / LoadBalancer). Scope this to the ingress
+# controller's own namespace/labels in a real deployment rather than
+# leaving it open cluster-wide; left broad here because ingress-controller
+# labels vary by which one is installed and this is a base layer other
+# overlays customize.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: lunatic-siem
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: 8000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontend
+  namespace: lunatic-siem
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: 80
+          protocol: TCP
+---
+# The one policy this whole file exists for: every app-tier pod (api +
+# all 6 workers, identified by the shared `part-of` label) may reach the
+# data tier's namespace on its three ports, and nothing else in this
+# namespace may.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-data-tier
+  namespace: lunatic-siem
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: lunatic-siem
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: lunatic-data
+      ports:
+        - port: 5432
+          protocol: TCP # PostgreSQL
+        - port: 6379
+          protocol: TCP # Redis
+        - port: 26379
+          protocol: TCP # Redis Sentinel
+        - port: 9200
+          protocol: TCP # OpenSearch
+---
+# Outbound egress to the public internet (threat-intel feeds, the MITRE
+# ATT&CK bundle, playbook webhooks) is deliberately NOT enumerated here by
+# destination: THREAT_INTEL feed hosts and EGRESS_ALLOWED_HOSTS are
+# per-tenant runtime configuration (app/core/egress.py), not something a
+# static NetworkPolicy can express. That control lives at the application
+# layer — every outbound HTTP call in this codebase goes through the
+# egress guard, which fails closed on an empty allow-list. This policy
+# only opens the HTTPS port itself for the two workloads that make
+# outbound calls at all (api, for playbook webhook actions; feeds, for
+# feed and MITRE imports); a production deployment should still add an
+# egress proxy or cloud NAT firewall allow-list as defense-in-depth
+# alongside the application-level guard.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-internet-https
+  namespace: lunatic-siem
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: ["api", "feeds"]
+  policyTypes: ["Egress"]
+  egress:
+    # 0.0.0.0/0 minus the RFC1918 ranges: reaches the public internet,
+    # never another pod/service inside this cluster's private address
+    # space (that path is covered by allow-egress-to-data-tier above, and
+    # nothing else in-cluster is a legitimate destination for these two
+    # workloads). Adjust the `except` ranges if the cluster's own pod/
+    # service CIDRs fall outside RFC1918.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP

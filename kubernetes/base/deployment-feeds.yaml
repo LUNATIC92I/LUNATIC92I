@@ -1,0 +1,87 @@
+# Threat-intelligence feed worker: pulls every configured feed on a fixed
+# timer (THREAT_INTEL_FEED_INTERVAL_SECONDS) and writes indicators. Unlike
+# every other worker in this directory, it is NOT driven by a Redis
+# Streams consumer group — it is a bare interval loop over the full feed
+# list (app/workers/feed_worker.py) with no cross-replica coordination or
+# claim/suppression guard. Deliberately kept at replicas: 1: running more
+# than one would mean every replica re-fetching and re-writing every feed
+# on every tick — wasted egress-guarded network calls and redundant writes,
+# not a correctness bug (writes are idempotent upserts) but pure waste. A
+# brief gap while a single replica restarts is self-healing on the next
+# tick, which is an acceptable trade against that duplication — unlike the
+# event pipeline workers above, a delayed feed sync has no in-flight event
+# that could be lost. Making this HA for real (leader election, or a
+# CronJob-per-feed redesign) is future work if a stricter feed-freshness
+# SLA is ever required.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feeds
+  namespace: lunatic-siem
+  labels:
+    app.kubernetes.io/name: feeds
+    app.kubernetes.io/part-of: lunatic-siem
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: feeds
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: feeds
+        app.kubernetes.io/part-of: lunatic-siem
+    spec:
+      serviceAccountName: lunatic-backend
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: feeds
+          image: lunatic-siem-backend:latest
+          command: ["python", "-m", "app.workers.feed_worker"]
+          ports:
+            - name: metrics
+              containerPort: 9100
+          envFrom:
+            - configMapRef:
+                name: lunatic-config
+            - secretRef:
+                name: lunatic-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}

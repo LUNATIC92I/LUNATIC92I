@@ -1,0 +1,58 @@
+# Non-secret configuration only — anything sensitive (passwords, keys,
+# connection strings that embed a password) lives in secret.yaml instead.
+# Mirrors .env.example; see that file for the rationale behind each value.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lunatic-config
+  namespace: lunatic-siem
+data:
+  ENV: "production"
+  LOG_LEVEL: "INFO"
+  CORS_ALLOWED_ORIGINS: "https://app.lunatic-siem.example.com"
+  JWT_ACCESS_TOKEN_TTL_SECONDS: "900"
+  JWT_REFRESH_TOKEN_TTL_SECONDS: "1209600"
+  MAX_FAILED_LOGIN_ATTEMPTS: "5"
+  LOCKOUT_DURATION_MINUTES: "15"
+  AUTH_LOGIN_RATE_LIMIT_PER_MINUTE: "20"
+  AUTH_REGISTER_RATE_LIMIT_PER_HOUR: "10"
+  AUTH_REFRESH_RATE_LIMIT_PER_MINUTE: "60"
+  # DATABASE_URL and REDIS_URL embed credentials and live in secret.yaml
+  # instead — Settings reads full connection strings, not host/port pieces
+  # (app/core/config.py), so there is nothing safe to put here for either.
+  # Cross-namespace: OpenSearch lives in `lunatic-data`
+  # (kubernetes/data-tier/), never colocated with the app tier — matches
+  # whatever `clusterName`/release name values-opensearch-ha.yaml uses.
+  OPENSEARCH_URL: "https://opensearch-cluster-master.lunatic-data.svc.cluster.local:9200"
+  OPENSEARCH_USERNAME: "admin"
+  OPENSEARCH_VERIFY_CERTS: "true"
+  OPENSEARCH_RAW_RETENTION_DAYS: "90"
+  OPENSEARCH_NORMALIZED_RETENTION_DAYS: "180"
+  OPENSEARCH_DEADLETTER_RETENTION_DAYS: "90"
+  INGEST_MAX_PAYLOAD_BYTES: "1048576"
+  INGEST_RATE_LIMIT_PER_MINUTE: "60000"
+  INGEST_DEDUP_TTL_SECONDS: "3600"
+  DETECTION_RULES_PATH: "/app/rules"
+  DETECTION_RULE_REFRESH_SECONDS: "60"
+  DETECTION_WINDOW_INTERVAL_SECONDS: "60"
+  CORRELATION_MAX_CLOCK_SKEW_SECONDS: "900"
+  # Empty means nothing is reachable — the egress guard fails closed
+  # (THREAT_MODEL.md §3.8). Set explicitly per deployment, never left as a
+  # wildcard.
+  EGRESS_ALLOWED_HOSTS: ""
+  EGRESS_ALLOW_HTTP: "false"
+  EGRESS_ALLOW_PRIVATE_DESTINATIONS: "false"
+  THREAT_INTEL_FEED_INTERVAL_SECONDS: "3600"
+  THREAT_INTEL_DEFAULT_TTL_DAYS: "30"
+  THREAT_INTEL_DROP_DIR: "/app/intel-drop"
+  MITRE_ATTACK_SOURCE: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
+  MITRE_CATALOG_MAX_AGE_DAYS: "90"
+  PLAYBOOKS_PATH: "/app/playbooks"
+  ALERT_DEDUP_WINDOW_MINUTES: "60"
+  ALERT_MIN_RISK_SCORE: "0"
+  HUNT_SEARCH_MAX_RESULTS: "1000"
+  HUNT_EXPORT_MAX_ROWS: "10000"
+  HUNT_EXPORT_RATE_LIMIT_PER_HOUR: "20"
+  METRICS_PORT: "9100"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  OTEL_SERVICE_NAME: "lunatic-siem-backend"

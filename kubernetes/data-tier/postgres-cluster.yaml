@@ -1,0 +1,98 @@
+# PostgreSQL HA via CloudNativePG (https://cloudnative-pg.io), the CNCF
+# sandbox operator for Postgres-on-Kubernetes: it owns leader election,
+# streaming replication, and automatic failover, none of which this
+# platform's own code should be reinventing. Install the operator first
+# (its own instructions, one command: `kubectl apply --server-side -f
+# https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.1.yaml`)
+# — this file only defines the database cluster itself.
+#
+# 3 instances: 1 primary + 2 streaming (synchronous) replicas. `api` and
+# every worker connect to the `postgres-rw` Service CloudNativePG creates
+# automatically, which always routes to the current primary — a failover
+# changes which pod that is, never the Service name the app talks to
+# (kubernetes/base/secret.yaml's DATABASE_URL references it directly).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: lunatic-data
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4-bookworm
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "512MB"
+
+  # At least one replica confirms the write before it's acknowledged: a
+  # primary failure loses nothing already reported as committed. The
+  # trade-off — writes block if every replica is briefly unavailable — is
+  # the correct one for a security event store where losing a committed
+  # write silently is worse than added write latency.
+  postgresGID: 26
+  postgresUID: 26
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+  storage:
+    size: 100Gi
+    storageClass: "" # cluster default; set explicitly per environment
+
+  bootstrap:
+    initdb:
+      database: lunatic_siem
+      owner: lunatic
+      secret:
+        name: postgres-app-credentials
+
+  # Continuous WAL archiving + a nightly base backup, both required for
+  # point-in-time recovery — replicas alone protect against a node
+  # failure, not against a bad migration or an accidental DROP. Point
+  # `destinationPath` at a real object store bucket per environment.
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: "s3://REPLACE-ME-backup-bucket/postgres"
+      s3Credentials:
+        accessKeyId:
+          name: postgres-backup-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: postgres-backup-credentials
+          key: SECRET_ACCESS_KEY
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+  affinity:
+    # Never put 2 of 3 instances on the same node — a single node failure
+    # must not be able to take out a majority.
+    podAntiAffinityType: required
+---
+# CloudNativePG reads this Secret for the app-role's own password —
+# EXAMPLE ONLY, replace exactly like kubernetes/base/secret.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-app-credentials
+  namespace: lunatic-data
+type: kubernetes.io/basic-auth
+stringData:
+  username: lunatic
+  password: "REPLACE-ME"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-backup-credentials
+  namespace: lunatic-data
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: "REPLACE-ME"
+  SECRET_ACCESS_KEY: "REPLACE-ME"

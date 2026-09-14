@@ -1,0 +1,80 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lunatic-siem
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - secret.yaml
+  - networkpolicy.yaml
+  - deployment-api.yaml
+  - deployment-parser.yaml
+  - deployment-indexer.yaml
+  - deployment-detection.yaml
+  - deployment-correlation.yaml
+  - deployment-feeds.yaml
+  - deployment-alerting.yaml
+  - deployment-frontend.yaml
+  - ingress.yaml
+
+# The shipped rule pack and playbook pack are configuration the API
+# installs into a tenant, not code — same reasoning as the read-only bind
+# mounts in docker-compose.yml. Kustomize's configMapGenerator only takes
+# individual files (a directory path is rejected), and its own default
+# name-hash suffix rolls every Deployment that mounts one automatically
+# when its content changes — no manual restart to pick up an edited rule.
+#
+# One ConfigMap per rules/ subdirectory, each mounted at its own path
+# under /app/rules/<category> in the Deployments below, together
+# reconstructing the exact tree app/detection/loader.py's `iter_rule_files`
+# walks — this matters specifically for rules/correlation/: the detection
+# worker's own loader explicitly skips that subdirectory name
+# (CORRELATION_DIRNAME in app/detection/loader.py) because those rules use
+# a different schema (window/stages, not conditions) and are loaded
+# separately by the correlation worker — flattening everything into one
+# ConfigMap would lose that boundary and feed correlation rule YAML into
+# the detection engine's loader by mistake.
+#
+# rules/{cloud,data_security,email,linux,network}/ are placeholders for a
+# future rule pack (each holds only a .gitkeep today) and have no
+# configMapGenerator entry yet — add one here, plus a matching volumeMount
+# below, the day they gain their first rule file.
+configMapGenerator:
+  - name: rules-authentication
+    files:
+      - ../../rules/authentication/brute_force.yml
+      - ../../rules/authentication/password_spraying.yml
+      - ../../rules/authentication/privileged_login_external.yml
+      - ../../rules/authentication/repeated_account_lockout.yml
+  - name: rules-correlation
+    files:
+      - ../../rules/correlation/account_takeover.yml
+      - ../../rules/correlation/credential_theft_lateral_movement.yml
+      - ../../rules/correlation/phishing_execution_persistence.yml
+  - name: rules-windows
+    files:
+      - ../../rules/windows/encoded_powershell.yml
+      - ../../rules/windows/lsass_credential_access.yml
+      - ../../rules/windows/office_spawns_interpreter.yml
+      - ../../rules/windows/powershell_download_cradle.yml
+      - ../../rules/windows/security_log_cleared.yml
+      - ../../rules/windows/service_installation.yml
+  - name: lunatic-playbooks
+    files:
+      - ../../playbooks/PB-001-brute-force-triage.yml
+      - ../../playbooks/PB-002-contain-compromised-account.yml
+      - ../../playbooks/PB-003-contain-host.yml
+
+images:
+  - name: lunatic-siem-backend
+    newName: REPLACE_WITH_YOUR_REGISTRY/lunatic-siem-backend
+    newTag: REPLACE_WITH_YOUR_TAG
+  - name: lunatic-siem-frontend
+    newName: REPLACE_WITH_YOUR_REGISTRY/lunatic-siem-frontend
+    newTag: REPLACE_WITH_YOUR_TAG
+
+commonLabels:
+  app.kubernetes.io/part-of: lunatic-siem
+  app.kubernetes.io/managed-by: kustomize
