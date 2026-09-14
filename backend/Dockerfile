@@ -1,6 +1,13 @@
 # syntax=docker/dockerfile:1
 # Pinned by exact version+variant, never `latest` (THREAT_MODEL.md / spec §32).
-FROM python:3.12.7-slim-bookworm AS base
+FROM python:3.12.14-slim-bookworm AS base
+
+# The base image's own OS packages accumulate CVEs between publishes even
+# with the tag pinned above (Phase 20 Trivy scan found 4 CRITICAL / 39
+# HIGH here before this line existed); this pulls the latest available
+# Debian security patches at build time rather than waiting for the next
+# upstream base-image publish.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

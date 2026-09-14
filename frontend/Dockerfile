@@ -8,7 +8,12 @@ ARG VITE_API_BASE_URL=http://localhost:8000
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build
 
-FROM nginx:1.27.2-alpine AS runtime
+FROM nginx:1.27.5-alpine AS runtime
+# Same reasoning as backend/Dockerfile: pull the latest available Alpine
+# security patches at build time rather than waiting on the next upstream
+# base-image publish (Phase 20 Trivy scan found 3 CRITICAL / 35 HIGH here
+# before this line existed).
+RUN apk update && apk upgrade && rm -rf /var/cache/apk/*
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
