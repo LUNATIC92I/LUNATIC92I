@@ -28,8 +28,10 @@ from app.collectors.base import RawIngestEvent
 from app.core import metrics
 from app.core.config import get_settings
 from app.core.eventbus import TOPIC_EVENTS_RAW, EventBus, EventBusMessage
+from app.core.tracing import get_tracer, inject_trace_headers
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer(__name__)
 
 
 class IngestOutcome(StrEnum):
@@ -74,50 +76,62 @@ class IngestionService:
         self._dedup_ttl_seconds = dedup_ttl_seconds or settings.ingest_dedup_ttl_seconds
 
     async def ingest(self, event: RawIngestEvent) -> IngestResult:
-        started = time.perf_counter()
+        # The root span for this event's whole trip through the pipeline:
+        # its context is injected into the message headers below and
+        # extracted again by the parser, detection and alert workers, so a
+        # single trace covers ingestion -> detection -> alert
+        # (docs/OBSERVABILITY.md).
+        with tracer.start_as_current_span(
+            "ingestion.ingest", attributes={"source_type": event.source_type}
+        ):
+            started = time.perf_counter()
 
-        if not await self._within_rate_limit(event):
-            metrics.events_rate_limited_total.labels(source_type=event.source_type).inc()
-            return IngestResult(
-                IngestOutcome.RATE_LIMITED, reason="tenant ingestion quota exceeded"
+            if not await self._within_rate_limit(event):
+                metrics.events_rate_limited_total.labels(source_type=event.source_type).inc()
+                return IngestResult(
+                    IngestOutcome.RATE_LIMITED, reason="tenant ingestion quota exceeded"
+                )
+
+            invalid_reason = self._validate(event)
+            if invalid_reason is not None:
+                return await self._dead_letter(event, invalid_reason)
+
+            if not await self._claim_idempotency_key(event):
+                metrics.events_duplicate_total.labels(source_type=event.source_type).inc()
+                return IngestResult(IngestOutcome.DUPLICATE, reason="already ingested")
+
+            message = EventBusMessage(
+                tenant_id=str(event.tenant_id),
+                key=event.idempotency_key,
+                payload=event.raw_payload,
+                headers=inject_trace_headers(
+                    {
+                        "source_type": event.source_type,
+                        "collector_id": event.collector_id,
+                        "received_at": event.received_at.isoformat(),
+                        "content_hash": event.content_hash,
+                        "source_ip": event.source_ip or "",
+                    }
+                ),
             )
 
-        invalid_reason = self._validate(event)
-        if invalid_reason is not None:
-            return await self._dead_letter(event, invalid_reason)
+            try:
+                message_id = await self._bus.publish(TOPIC_EVENTS_RAW, message)
+            except Exception as exc:  # noqa: BLE001  any bus failure must be contained
+                logger.exception("failed to publish event to bus")
+                # Release the dedup claim: this event was never actually
+                # ingested, so a retry of it must not be mistaken for a
+                # duplicate and discarded.
+                await self._release_idempotency_key(event)
+                return await self._dead_letter(
+                    event, DeadLetterReason.PUBLISH_FAILED, cause=str(exc)
+                )
 
-        if not await self._claim_idempotency_key(event):
-            metrics.events_duplicate_total.labels(source_type=event.source_type).inc()
-            return IngestResult(IngestOutcome.DUPLICATE, reason="already ingested")
-
-        message = EventBusMessage(
-            tenant_id=str(event.tenant_id),
-            key=event.idempotency_key,
-            payload=event.raw_payload,
-            headers={
-                "source_type": event.source_type,
-                "collector_id": event.collector_id,
-                "received_at": event.received_at.isoformat(),
-                "content_hash": event.content_hash,
-                "source_ip": event.source_ip or "",
-            },
-        )
-
-        try:
-            message_id = await self._bus.publish(TOPIC_EVENTS_RAW, message)
-        except Exception as exc:  # noqa: BLE001  any bus failure must be contained
-            logger.exception("failed to publish event to bus")
-            # Release the dedup claim: this event was never actually
-            # ingested, so a retry of it must not be mistaken for a
-            # duplicate and discarded.
-            await self._release_idempotency_key(event)
-            return await self._dead_letter(event, DeadLetterReason.PUBLISH_FAILED, cause=str(exc))
-
-        metrics.events_ingested_total.labels(source_type=event.source_type).inc()
-        metrics.ingestion_latency_seconds.labels(source_type=event.source_type).observe(
-            time.perf_counter() - started
-        )
-        return IngestResult(IngestOutcome.ACCEPTED, message_id=message_id)
+            metrics.events_ingested_total.labels(source_type=event.source_type).inc()
+            metrics.ingestion_latency_seconds.labels(source_type=event.source_type).observe(
+                time.perf_counter() - started
+            )
+            return IngestResult(IngestOutcome.ACCEPTED, message_id=message_id)
 
     def _validate(self, event: RawIngestEvent) -> DeadLetterReason | None:
         if not event.raw_payload:

@@ -19,6 +19,8 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.db import async_session_factory
 from app.core.logging import configure_logging
+from app.core.observability import postgres_ready, start_observability_server
+from app.core.tracing import configure_tracing
 from app.mitre.importer import ImportError_, load_bundle, parse_bundle
 from app.models.identity import Organization
 from app.services.feeds import sync_shared_feeds, sync_tenant_feeds
@@ -86,7 +88,10 @@ async def sync_once() -> int:
 
 async def run() -> None:
     configure_logging()
-    interval = get_settings().threat_intel_feed_interval_seconds
+    configure_tracing()
+    settings = get_settings()
+    interval = settings.threat_intel_feed_interval_seconds
+    obs = await start_observability_server(settings.metrics_port, ready_check=postgres_ready)
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -94,13 +99,17 @@ async def run() -> None:
         loop.add_signal_handler(sig, stop.set)
 
     logger.info("feed worker running", extra={"interval_seconds": interval})
-    while not stop.is_set():
-        try:
-            await sync_once()
-        except Exception:  # noqa: BLE001  the loop must outlive any single pass
-            logger.exception("feed sync pass failed")
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(stop.wait(), timeout=interval)
+    try:
+        while not stop.is_set():
+            try:
+                await sync_once()
+            except Exception:  # noqa: BLE001  the loop must outlive any single pass
+                logger.exception("feed sync pass failed")
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=interval)
+    finally:
+        obs.close()
+        await obs.wait_closed()
     logger.info("feed worker stopped")
 
 

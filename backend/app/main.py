@@ -1,9 +1,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
 from app.api.alerts import router as alerts_router
 from app.api.assets import router as assets_router
@@ -22,12 +21,35 @@ from app.api.users import router as users_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.metrics import api_requests_total
+from app.core.observability import (
+    combine,
+    opensearch_ready,
+    postgres_ready,
+    redis_ready,
+    start_observability_server,
+)
+from app.core.tracing import configure_tracing
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
-    yield
+    configure_tracing()
+    # `/metrics` deliberately never joins the public route table below: it
+    # is operational detail (event/alert/detection volume) a caller outside
+    # the deployment has no business seeing (Phase 16's own review
+    # criterion), so it lives only on this internal-only port, which
+    # docker-compose never publishes to the host — see
+    # `Settings.metrics_port` and `app/core/observability.py`.
+    obs = await start_observability_server(
+        get_settings().metrics_port,
+        ready_check=combine(postgres_ready, redis_ready, opensearch_ready),
+    )
+    try:
+        yield
+    finally:
+        obs.close()
+        await obs.wait_closed()
 
 
 def create_app() -> FastAPI:
@@ -75,10 +97,6 @@ def create_app() -> FastAPI:
             method=request.method, path=request.url.path, status=response.status_code
         ).inc()
         return response
-
-    @app.get("/metrics")
-    async def metrics() -> Response:
-        return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
     return app
 

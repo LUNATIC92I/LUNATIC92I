@@ -2,16 +2,36 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Every target below is a worker's (or the API's) internal-only
+# observability port (Settings.metrics_port, default 9100) — never the
+# public port docker-compose publishes to the host. Prometheus reaches it
+# over the `app` network by container DNS name; nothing outside the
+# deployment can (Phase 16's own review criterion — see docs/OBSERVABILITY.md).
 scrape_configs:
   - job_name: lunatic-backend
     metrics_path: /metrics
     static_configs:
-      - targets: ["backend:8000"]
+      - targets: ["backend:9100"]
+
+  - job_name: lunatic-workers
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "parser:9100"
+          - "indexer:9100"
+          - "detection:9100"
+          - "correlation:9100"
+          - "feeds:9100"
+          - "alerting:9100"
+        labels:
+          # A worker's own consumer group name doubles as its role label —
+          # cheaper to read on a dashboard than the bare compose service name.
+          component: worker
 
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
 
-# Per-worker and per-datastore exporters (postgres_exporter, redis_exporter,
-# OpenSearch monitoring) are added as those components ship metrics
-# (Phase 16 — Observability).
+# postgres_exporter / redis_exporter / OpenSearch monitoring are added when
+# those components ship their own metrics — out of scope for Phase 16,
+# which covers this platform's own services.

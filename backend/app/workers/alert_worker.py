@@ -39,9 +39,22 @@ from app.core.eventbus import (
     get_event_bus,
 )
 from app.core.logging import configure_logging
+from app.core.observability import (
+    combine,
+    postgres_ready,
+    redis_ready,
+    start_observability_server,
+)
+from app.core.tracing import (
+    configure_tracing,
+    extract_trace_context,
+    get_tracer,
+    inject_trace_headers,
+)
 from app.services.alerts import AlertInput, create_or_update
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer(__name__)
 
 CONSUMER_GROUP = "alerting"
 # Below this score an alert is noise in a queue rather than work: the
@@ -192,49 +205,55 @@ class AlertWorker:
         )
 
     async def accept(self, topic: str, message: EventBusMessage) -> None:
-        try:
-            document = json.loads(message.payload)
-        except (json.JSONDecodeError, ValueError) as exc:
-            await self._reject(topic, message, f"undecodable payload: {exc}")
-            return
-        if not isinstance(document, dict):
-            await self._reject(topic, message, "payload is not an object")
-            return
+        # The last hop of "ingestion -> detection -> alert": a child of
+        # whatever the detection or correlation worker injected into this
+        # message's headers (docs/OBSERVABILITY.md).
+        with tracer.start_as_current_span(
+            "alert.create", context=extract_trace_context(message.headers)
+        ):
+            try:
+                document = json.loads(message.payload)
+            except (json.JSONDecodeError, ValueError) as exc:
+                await self._reject(topic, message, f"undecodable payload: {exc}")
+                return
+            if not isinstance(document, dict):
+                await self._reject(topic, message, "payload is not an object")
+                return
 
-        payload = (
-            correlation_to_alert(document)
-            if topic == TOPIC_CORRELATIONS_CREATED
-            else detection_to_alert(document)
-        )
+            payload = (
+                correlation_to_alert(document)
+                if topic == TOPIC_CORRELATIONS_CREATED
+                else detection_to_alert(document)
+            )
 
-        if payload is not None and payload.risk_score >= self._min_risk_score:
-            async with tenant_scoped_session(payload.tenant_id) as db:
-                alert, created = await create_or_update(
-                    db, payload, window_minutes=self._window
-                )
-                summary = {
-                    "alert_id": str(alert.id),
-                    "display_id": alert.display_id,
-                    "tenant_id": str(alert.tenant_id),
-                    "title": alert.title,
-                    "severity": alert.severity,
-                    "risk_score": alert.risk_score,
-                    "risk_bucket": alert.risk_bucket,
-                    "status": alert.status,
-                    "source": alert.source,
-                    "mitre_techniques": list(alert.mitre_techniques),
-                    "occurrence_count": alert.occurrence_count,
-                }
-                await db.commit()
+            if payload is not None and payload.risk_score >= self._min_risk_score:
+                async with tenant_scoped_session(payload.tenant_id) as db:
+                    alert, created = await create_or_update(
+                        db, payload, window_minutes=self._window
+                    )
+                    summary = {
+                        "alert_id": str(alert.id),
+                        "display_id": alert.display_id,
+                        "tenant_id": str(alert.tenant_id),
+                        "title": alert.title,
+                        "severity": alert.severity,
+                        "risk_score": alert.risk_score,
+                        "risk_bucket": alert.risk_bucket,
+                        "status": alert.status,
+                        "source": alert.source,
+                        "mitre_techniques": list(alert.mitre_techniques),
+                        "occurrence_count": alert.occurrence_count,
+                    }
+                    await db.commit()
 
-            if created:
-                # Only new alerts are published: notifications and playbooks
-                # hang off this topic, and a fifty-first occurrence must not
-                # page anyone.
-                await self._publish(summary)
+                if created:
+                    # Only new alerts are published: notifications and
+                    # playbooks hang off this topic, and a fifty-first
+                    # occurrence must not page anyone.
+                    await self._publish(summary)
 
-        if message.message_id is not None:
-            await self._bus.ack(topic, CONSUMER_GROUP, message.message_id)
+            if message.message_id is not None:
+                await self._bus.ack(topic, CONSUMER_GROUP, message.message_id)
 
     async def _publish(self, summary: dict[str, Any]) -> None:
         await self._bus.publish(
@@ -243,10 +262,12 @@ class AlertWorker:
                 tenant_id=summary["tenant_id"],
                 key=summary["alert_id"],
                 payload=json.dumps(summary).encode(),
-                headers={
-                    "severity": str(summary["severity"]),
-                    "risk_bucket": str(summary.get("risk_bucket") or ""),
-                },
+                headers=inject_trace_headers(
+                    {
+                        "severity": str(summary["severity"]),
+                        "risk_bucket": str(summary.get("risk_bucket") or ""),
+                    }
+                ),
             ),
         )
 
@@ -280,7 +301,11 @@ class AlertWorker:
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     worker = AlertWorker(bus=get_event_bus())
+    obs = await start_observability_server(
+        get_settings().metrics_port, ready_check=combine(redis_ready, postgres_ready)
+    )
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -288,7 +313,11 @@ async def run() -> None:
         loop.add_signal_handler(sig, stop.set)
 
     logger.info("alert worker running")
-    await worker.run(stop)
+    try:
+        await worker.run(stop)
+    finally:
+        obs.close()
+        await obs.wait_closed()
     logger.info("alert worker stopped")
 
 

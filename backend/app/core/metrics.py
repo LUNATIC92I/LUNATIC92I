@@ -263,3 +263,26 @@ incident_transitions_total = Counter(
     "Incident workflow transitions, by the state moved to",
     ["to_status"],
 )
+
+hunt_searches_total = Counter(
+    "hunt_searches_total",
+    "Threat hunting searches executed (spec §15)",
+)
+
+hunt_exports_total = Counter(
+    "hunt_exports_total",
+    "Hunt export attempts, including quota-rejected ones (THREAT_MODEL.md §3.7)",
+    ["format", "outcome"],
+)
+
+playbook_runs_total = Counter(
+    "playbook_runs_total",
+    "Playbook runs started, by the status they finished (or halted) at",
+    ["status", "dry_run"],
+)
+
+playbook_approvals_total = Counter(
+    "playbook_approvals_total",
+    "Destructive-step approval decisions (ARCHITECTURE.md §7.5)",
+    ["outcome"],
+)

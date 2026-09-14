@@ -20,7 +20,9 @@ from app.collectors.syslog import SyslogTCPCollector, SyslogUDPCollector
 from app.core.config import get_settings
 from app.core.eventbus import get_event_bus
 from app.core.logging import configure_logging
+from app.core.observability import redis_ready, start_observability_server
 from app.core.redis import get_redis
+from app.core.tracing import configure_tracing
 from app.services.ingestion import IngestionService
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     settings = get_settings()
 
     if not settings.syslog_tenant_id:
@@ -63,6 +66,7 @@ async def run() -> None:
 
     for collector in collectors:
         await collector.start()
+    obs = await start_observability_server(settings.metrics_port, ready_check=redis_ready)
 
     stop_requested = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -77,6 +81,8 @@ async def run() -> None:
     logger.info("shutting down syslog collector worker")
     for collector in collectors:
         await collector.stop()
+    obs.close()
+    await obs.wait_closed()
 
 
 def main() -> None:

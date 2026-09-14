@@ -1,0 +1,248 @@
+{
+  "id": null,
+  "uid": "lunatic-pipeline-overview",
+  "title": "LUNATIC-IT SIEM — Pipeline Overview",
+  "description": "Detect. Investigate. Respond. — ingestion through response, one screen. Built from the spec §28 metric set (app/core/metrics.py). Two panels are canaries, not activity graphs: Events Dropped and Egress Blocked should sit at zero — any sustained non-zero value is an incident, not a statistic.",
+  "tags": ["lunatic-siem"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Ingestion & Processing",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Events Ingested (by source type)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(rate(events_ingested_total[5m])) by (source_type)",
+          "legendFormat": "{{source_type}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Events Dropped (silent-loss canary)",
+      "description": "spec §26: any non-zero value here means an event was neither published nor dead-lettered. This must alert.",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.0001 }
+            ]
+          }
+        }
+      },
+      "targets": [{ "expr": "sum(rate(events_dropped_total[5m]))" }]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Ingestion Latency (p95)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ingestion_latency_seconds_bucket[5m])) by (le, source_type))",
+          "legendFormat": "{{source_type}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Parse/Normalize Latency (p95)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(processing_latency_seconds_bucket[5m])) by (le, format))",
+          "legendFormat": "{{format}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Detection, Correlation & Risk",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Detections (by severity)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "expr": "sum(rate(detections_total[5m])) by (severity)",
+          "legendFormat": "{{severity}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Correlations Completed (by severity)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
+      "targets": [
+        {
+          "expr": "sum(rate(correlations_total[5m])) by (severity)",
+          "legendFormat": "{{severity}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Detection Rule Set Latency (p95)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(detection_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "streaming rules"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(correlation_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "correlation rules"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Alerts, Incidents & Response",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Alerts Created vs Deduplicated",
+      "description": "The gap between these two lines is how much noise deduplication is absorbing.",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 19 },
+      "targets": [
+        {
+          "expr": "sum(rate(alerts_created_total[5m]))",
+          "legendFormat": "created"
+        },
+        {
+          "expr": "sum(rate(alerts_deduplicated_total[5m]))",
+          "legendFormat": "deduplicated (folded into an existing alert)"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Incidents Opened (by severity)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 19 },
+      "targets": [
+        {
+          "expr": "sum(rate(incidents_created_total[5m])) by (severity)",
+          "legendFormat": "{{severity}}"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Playbook Runs (by finishing status)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 19 },
+      "targets": [
+        {
+          "expr": "sum(rate(playbook_runs_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Threat Hunting, Intelligence & API",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Hunt Searches & Exports",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 28 },
+      "targets": [
+        {
+          "expr": "sum(rate(hunt_searches_total[5m]))",
+          "legendFormat": "searches"
+        },
+        {
+          "expr": "sum(rate(hunt_exports_total[5m])) by (outcome)",
+          "legendFormat": "export: {{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "IOC Matches (by classification)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 28 },
+      "targets": [
+        {
+          "expr": "sum(rate(ioc_matches_total[5m])) by (classification)",
+          "legendFormat": "{{classification}}"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Egress Requests Blocked (SSRF canary)",
+      "description": "THREAT_MODEL.md §3.8: any value here is either a misconfiguration or an SSRF attempt.",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 28 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.0001 }
+            ]
+          }
+        }
+      },
+      "targets": [{ "expr": "sum(rate(egress_requests_blocked_total[5m]))" }]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "API Requests (by status code)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 28 },
+      "targets": [
+        {
+          "expr": "sum(rate(api_requests_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ]
+}

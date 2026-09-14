@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
 from app.core.config import get_settings
+from app.core.metrics import playbook_approvals_total, playbook_runs_total
 from app.models.alerts import Alert
 from app.models.playbooks import Playbook, PlaybookActionApproval, PlaybookRun
 from app.playbooks.actions import ACTION_REGISTRY
@@ -188,6 +189,7 @@ async def start_run(
     )
 
     outcomes = await run_playbook(db, run=run, playbook=playbook, actor_id=actor_id)
+    playbook_runs_total.labels(status=run.status, dry_run=str(dry_run).lower()).inc()
     return run, outcomes
 
 
@@ -265,6 +267,7 @@ async def approve_action(
     approval.decided_by = approver_id
     approval.decided_at = datetime.now(UTC)
     await db.flush()
+    playbook_approvals_total.labels(outcome="approved").inc()
 
     await record_audit_event(
         db,
@@ -283,6 +286,7 @@ async def approve_action(
     playbook = await db.get(Playbook, run.playbook_id)
     assert playbook is not None  # nosec B101 - a run always references a real playbook row
     outcomes = await run_playbook(db, run=run, playbook=playbook, actor_id=run.triggered_by)
+    playbook_runs_total.labels(status=run.status, dry_run=str(run.dry_run).lower()).inc()
     return approval, run, outcomes
 
 
@@ -305,10 +309,12 @@ async def reject_action(
     approval.decided_by = approver_id
     approval.reason = reason
     approval.decided_at = datetime.now(UTC)
+    playbook_approvals_total.labels(outcome="rejected").inc()
 
     run = await get_run(db, tenant_id, approval.playbook_run_id)
     run.status = "REJECTED"
     run.error = f"step {approval.step_index} ({approval.action_name}) rejected: {reason}"
+    playbook_runs_total.labels(status=run.status, dry_run=str(run.dry_run).lower()).inc()
 
     await record_audit_event(
         db,

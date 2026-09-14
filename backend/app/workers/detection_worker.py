@@ -46,8 +46,21 @@ from app.core.eventbus import (
     get_event_bus,
 )
 from app.core.logging import configure_logging
+from app.core.observability import (
+    combine,
+    opensearch_ready,
+    postgres_ready,
+    redis_ready,
+    start_observability_server,
+)
 from app.core.opensearch import get_opensearch
 from app.core.redis import get_redis
+from app.core.tracing import (
+    configure_tracing,
+    extract_trace_context,
+    get_tracer,
+    inject_trace_headers,
+)
 from app.detection.engine import (
     RedisSuppressionStore,
     RuleMatch,
@@ -61,6 +74,7 @@ from app.risk.engine import apply_to_detection
 from app.services.detection_rules import load_active_rules
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer(__name__)
 
 CONSUMER_GROUP = "detection"
 
@@ -150,33 +164,36 @@ class DetectionWorker:
         self._output_topic = output_topic
 
     async def accept(self, message: EventBusMessage) -> None:
-        try:
-            document = json.loads(message.payload)
-        except (json.JSONDecodeError, ValueError) as exc:
-            await self._reject(message, f"undecodable normalized document: {exc}")
-            return
-        if not isinstance(document, dict):
-            await self._reject(message, "normalized document is not an object")
-            return
+        with tracer.start_as_current_span(
+            "detection.evaluate", context=extract_trace_context(message.headers)
+        ):
+            try:
+                document = json.loads(message.payload)
+            except (json.JSONDecodeError, ValueError) as exc:
+                await self._reject(message, f"undecodable normalized document: {exc}")
+                return
+            if not isinstance(document, dict):
+                await self._reject(message, "normalized document is not an object")
+                return
 
-        try:
-            tenant_id = uuid.UUID(str(document.get("tenant_id")))
-        except (TypeError, ValueError):
-            # Without a tenant there is no rule set and no isolation
-            # boundary; evaluating it against some default tenant's rules
-            # would be worse than dead-lettering it.
-            await self._reject(message, "normalized document has no usable tenant_id")
-            return
+            try:
+                tenant_id = uuid.UUID(str(document.get("tenant_id")))
+            except (TypeError, ValueError):
+                # Without a tenant there is no rule set and no isolation
+                # boundary; evaluating it against some default tenant's rules
+                # would be worse than dead-lettering it.
+                await self._reject(message, "normalized document has no usable tenant_id")
+                return
 
-        engine = await self._registry.engine_for(tenant_id)
-        matches = await engine.evaluate(document)
-        # Scored here rather than inside the engine because this is where
-        # the enriched event is: asset criticality, user risk and IOC
-        # matches are enrichment output, not rule output (Phase 8).
-        await self.publish(matches, event=document)
+            engine = await self._registry.engine_for(tenant_id)
+            matches = await engine.evaluate(document)
+            # Scored here rather than inside the engine because this is where
+            # the enriched event is: asset criticality, user risk and IOC
+            # matches are enrichment output, not rule output (Phase 8).
+            await self.publish(matches, event=document)
 
-        if message.message_id is not None:
-            await self._bus.ack(self._topic, CONSUMER_GROUP, message.message_id)
+            if message.message_id is not None:
+                await self._bus.ack(self._topic, CONSUMER_GROUP, message.message_id)
 
     async def publish(
         self, matches: list[RuleMatch], event: dict[str, Any] | None = None
@@ -189,15 +206,17 @@ class DetectionWorker:
                     tenant_id=match.tenant_id,
                     key=match.detection_id,
                     payload=json.dumps(document).encode(),
-                    headers={
-                        "rule_id": match.rule_id,
-                        "severity": match.severity,
-                        "risk_bucket": str(document["risk_bucket"]),
-                        # Carried in a header as well as the body so a
-                        # downstream consumer can drop dry-run detections
-                        # without deserializing them.
-                        "dry_run": str(match.dry_run).lower(),
-                    },
+                    headers=inject_trace_headers(
+                        {
+                            "rule_id": match.rule_id,
+                            "severity": match.severity,
+                            "risk_bucket": str(document["risk_bucket"]),
+                            # Carried in a header as well as the body so a
+                            # downstream consumer can drop dry-run detections
+                            # without deserializing them.
+                            "dry_run": str(match.dry_run).lower(),
+                        }
+                    ),
                 ),
             )
 
@@ -305,7 +324,12 @@ def build(bus: EventBus | None = None) -> tuple[DetectionWorker, WindowedSchedul
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     worker, scheduler = build()
+    obs = await start_observability_server(
+        get_settings().metrics_port,
+        ready_check=combine(redis_ready, postgres_ready, opensearch_ready),
+    )
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -320,6 +344,8 @@ async def run() -> None:
         windowed.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await windowed
+        obs.close()
+        await obs.wait_closed()
     logger.info("detection worker stopped")
 
 

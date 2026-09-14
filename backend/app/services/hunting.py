@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
 from app.core.config import get_settings
+from app.core.metrics import hunt_exports_total, hunt_searches_total
 from app.hunting.pivots import EVENT_FIELDS
 from app.hunting.query import build_query
 from app.models.hunting import SavedHunt
@@ -73,6 +74,7 @@ async def execute_search(
         "sort": [{"timestamp": {"order": "desc"}}],
         "_source": list(EVENT_FIELDS),
     }
+    hunt_searches_total.inc()
     try:
         response = await client.search(index=NORMALIZED_ALIAS, body=body)
     except NotFoundError:
@@ -262,6 +264,7 @@ async def export_hunt(
     commits once, in the API layer, whichever branch is taken."""
     settings = get_settings()
     if not await _within_export_rate_limit(redis, tenant_id):
+        hunt_exports_total.labels(format=request.format, outcome="rate_limited").inc()
         await record_audit_event(
             db,
             tenant_id=tenant_id,
@@ -289,6 +292,7 @@ async def export_hunt(
         limit=max_rows,
     )
 
+    hunt_exports_total.labels(format=request.format, outcome="success").inc()
     await record_audit_event(
         db,
         tenant_id=tenant_id,

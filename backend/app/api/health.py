@@ -1,13 +1,19 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, Response, status
-from sqlalchemy import text
 
-from app.core.db import async_session_factory
+from app.core.observability import opensearch_ready, postgres_ready, redis_ready
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
+
+_CHECKS = {
+    "database_unreachable": postgres_ready,
+    "redis_unreachable": redis_ready,
+    "opensearch_unreachable": opensearch_ready,
+}
 
 
 @router.get("/health")
@@ -19,14 +25,14 @@ async def health() -> dict[str, str]:
 
 @router.get("/ready")
 async def ready(response: Response) -> dict[str, str]:
-    """Readiness probe: checks the app can actually reach PostgreSQL.
-    Redis/OpenSearch checks are added as those clients are wired up in
-    later phases."""
-    try:
-        async with async_session_factory() as session:
-            await session.execute(text("SELECT 1"))
-    except Exception:
-        logger.exception("Readiness check failed: database unreachable")
+    """Readiness probe: the API's three real dependencies, checked
+    concurrently. Any one being unreachable makes the API unable to serve
+    most of its routes, so all three gate readiness rather than just the
+    database that happened to be wired up first."""
+    reasons = list(_CHECKS)
+    results = await asyncio.gather(*(check() for check in _CHECKS.values()))
+    failures = [reason for reason, ok in zip(reasons, results, strict=True) if not ok]
+    if failures:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "not_ready", "reason": "database_unreachable"}
+        return {"status": "not_ready", "reason": failures[0], "reasons": ",".join(failures)}
     return {"status": "ready"}

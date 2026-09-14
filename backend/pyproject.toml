@@ -34,6 +34,12 @@ dependencies = [
     # by definition (Windows Event Log), so stdlib ElementTree is not an
     # option here — see THREAT_MODEL.md §3.8.
     "defusedxml>=0.7.1,<0.8",
+    # Distributed tracing (Phase 16). The OTLP/HTTP exporter only ever runs
+    # when OTEL_EXPORTER_OTLP_ENDPOINT is set — see app/core/tracing.py —
+    # same fail-closed-by-default shape as the egress guard.
+    "opentelemetry-api>=1.44,<2.0",
+    "opentelemetry-sdk>=1.44,<2.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.44,<2.0",
 ]
 
 [project.optional-dependencies]

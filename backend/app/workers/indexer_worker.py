@@ -23,6 +23,7 @@ import signal
 import time
 from typing import Any
 
+from app.core.config import get_settings
 from app.core.eventbus import (
     TOPIC_DETECTIONS_CREATED,
     TOPIC_EVENTS_NORMALIZED,
@@ -31,7 +32,14 @@ from app.core.eventbus import (
     get_event_bus,
 )
 from app.core.logging import configure_logging
+from app.core.observability import (
+    combine,
+    opensearch_ready,
+    redis_ready,
+    start_observability_server,
+)
 from app.core.opensearch import get_opensearch
+from app.core.tracing import configure_tracing
 from app.enrichment.base import EnrichmentPipeline
 from app.enrichment.providers import (
     AssetContextProvider,
@@ -182,12 +190,16 @@ def detection_worker(bus: EventBus, client: Any) -> "IndexerWorker":
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     client = get_opensearch()
     await bootstrap_indices(client)
 
     bus = get_event_bus()
     events = IndexerWorker(bus=bus, indexer=EventIndexer(client))
     detections = detection_worker(bus, client)
+    obs = await start_observability_server(
+        get_settings().metrics_port, ready_check=combine(redis_ready, opensearch_ready)
+    )
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -211,6 +223,8 @@ async def run() -> None:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         await client.close()
+        obs.close()
+        await obs.wait_closed()
     logger.info("indexer worker stopped")
 
 

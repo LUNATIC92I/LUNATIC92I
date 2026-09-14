@@ -14,6 +14,7 @@ import contextlib
 import logging
 import signal
 
+from app.core.config import get_settings
 from app.core.eventbus import (
     TOPIC_EVENTS_NORMALIZED,
     TOPIC_EVENTS_RAW,
@@ -22,9 +23,17 @@ from app.core.eventbus import (
     get_event_bus,
 )
 from app.core.logging import configure_logging
+from app.core.observability import redis_ready, start_observability_server
+from app.core.tracing import (
+    configure_tracing,
+    extract_trace_context,
+    get_tracer,
+    inject_trace_headers,
+)
 from app.services.processing import EventProcessor, ProcessingFailure, serialize_document
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer(__name__)
 
 CONSUMER_GROUP = "parser"
 RECLAIM_INTERVAL_SECONDS = 60
@@ -49,38 +58,47 @@ class ParserWorker:
 
     async def handle(self, message: EventBusMessage) -> None:
         """Processes exactly one message to a terminal state, then acks."""
-        outcome = self._processor.process(
-            raw_payload=message.payload,
-            tenant_id=message.tenant_id,
-            headers=message.headers,
-        )
-
-        if isinstance(outcome, ProcessingFailure):
-            await self._bus.dead_letter(
-                self._raw_topic, message, reason=f"{outcome.stage}: {outcome.reason}"
-            )
-            logger.warning(
-                "event dead-lettered during processing",
-                extra={"stage": outcome.stage, "tenant_id": message.tenant_id},
-            )
-        else:
-            document = outcome.document
-            await self._bus.publish(
-                self._normalized_topic,
-                EventBusMessage(
-                    tenant_id=message.tenant_id,
-                    key=document["event_id"],
-                    payload=serialize_document(document),
-                    headers={
-                        "source_type": document.get("source_type", "unknown"),
-                        "class": str(document.get("class", "")),
-                        "schema_version": document["schema_version"],
-                    },
-                ),
+        # A child of whatever span the producer (ingestion, or a previous
+        # hop) injected into `message.headers` — this is the join point
+        # that makes "ingestion -> parsing -> ..." one trace instead of two
+        # disconnected ones (docs/OBSERVABILITY.md).
+        with tracer.start_as_current_span(
+            "parser.handle", context=extract_trace_context(message.headers)
+        ):
+            outcome = self._processor.process(
+                raw_payload=message.payload,
+                tenant_id=message.tenant_id,
+                headers=message.headers,
             )
 
-        if message.message_id is not None:
-            await self._bus.ack(self._raw_topic, CONSUMER_GROUP, message.message_id)
+            if isinstance(outcome, ProcessingFailure):
+                await self._bus.dead_letter(
+                    self._raw_topic, message, reason=f"{outcome.stage}: {outcome.reason}"
+                )
+                logger.warning(
+                    "event dead-lettered during processing",
+                    extra={"stage": outcome.stage, "tenant_id": message.tenant_id},
+                )
+            else:
+                document = outcome.document
+                await self._bus.publish(
+                    self._normalized_topic,
+                    EventBusMessage(
+                        tenant_id=message.tenant_id,
+                        key=document["event_id"],
+                        payload=serialize_document(document),
+                        headers=inject_trace_headers(
+                            {
+                                "source_type": document.get("source_type", "unknown"),
+                                "class": str(document.get("class", "")),
+                                "schema_version": document["schema_version"],
+                            }
+                        ),
+                    ),
+                )
+
+            if message.message_id is not None:
+                await self._bus.ack(self._raw_topic, CONSUMER_GROUP, message.message_id)
 
     async def run_once_over(self, messages: list[EventBusMessage]) -> None:
         for message in messages:
@@ -122,8 +140,10 @@ class ParserWorker:
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     bus = get_event_bus()
     worker = ParserWorker(bus=bus)
+    obs = await start_observability_server(get_settings().metrics_port, ready_check=redis_ready)
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -131,7 +151,11 @@ async def run() -> None:
         loop.add_signal_handler(sig, stop.set)
 
     logger.info("parser worker running")
-    await worker.run(stop)
+    try:
+        await worker.run(stop)
+    finally:
+        obs.close()
+        await obs.wait_closed()
     logger.info("parser worker stopped")
 
 

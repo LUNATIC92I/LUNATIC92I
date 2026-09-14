@@ -86,11 +86,18 @@ async def test_write_alias_exists_so_rollover_has_a_target(
     opensearch: AsyncOpenSearch,
 ) -> None:
     """Without a concrete write index behind the alias, lifecycle silently
-    never rolls over and retention never runs."""
+    never rolls over and retention never runs. The alias can legitimately
+    sit behind more than one index once ILM has actually rolled it over at
+    least once — the invariant that matters is that exactly one of them is
+    the write index, not that only one index exists at all."""
     aliases = await opensearch.indices.get_alias(name=NORMALIZED_ALIAS)
     assert aliases, "normalized write alias missing"
-    [(_index, meta)] = aliases.items()
-    assert meta["aliases"][NORMALIZED_ALIAS]["is_write_index"] is True
+    write_indices = [
+        index
+        for index, meta in aliases.items()
+        if meta["aliases"][NORMALIZED_ALIAS].get("is_write_index")
+    ]
+    assert len(write_indices) == 1, f"expected exactly one write index, got {write_indices}"
 
 
 async def test_lifecycle_policies_are_installed(opensearch: AsyncOpenSearch) -> None:

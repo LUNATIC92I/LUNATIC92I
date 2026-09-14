@@ -31,7 +31,9 @@ from app.core.eventbus import (
     get_event_bus,
 )
 from app.core.logging import configure_logging
+from app.core.observability import redis_ready, start_observability_server
 from app.core.redis import get_redis
+from app.core.tracing import configure_tracing
 from app.correlation.engine import (
     CorrelationEngine,
     CorrelationInput,
@@ -155,7 +157,9 @@ def build(bus: EventBus | None = None) -> CorrelationWorker:
 
 async def run() -> None:
     configure_logging()
+    configure_tracing()
     worker = build()
+    obs = await start_observability_server(get_settings().metrics_port, ready_check=redis_ready)
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -163,7 +167,11 @@ async def run() -> None:
         loop.add_signal_handler(sig, stop.set)
 
     logger.info("correlation worker running")
-    await worker.run(stop)
+    try:
+        await worker.run(stop)
+    finally:
+        obs.close()
+        await obs.wait_closed()
     logger.info("correlation worker stopped")
 
 

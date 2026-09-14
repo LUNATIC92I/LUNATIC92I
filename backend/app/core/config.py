@@ -137,6 +137,28 @@ class Settings(BaseSettings):
     # after that the database is authoritative.
     playbooks_path: str = "/app/playbooks"
 
+    # --- Observability (Phase 16) ---
+    # `/health`, `/ready` and `/metrics` for every worker process are served
+    # on this port, deliberately never published in docker-compose's `ports:`
+    # (only reachable from Prometheus over the internal `app` network) —
+    # unlike the API's own request/response routes, metrics are operational
+    # detail (event/alert/detection volume) that a caller outside the
+    # deployment has no business seeing (this phase's own review criterion).
+    # The API backend runs the same server on the same default port
+    # alongside its public one for exactly that reason: `/metrics` moves
+    # off the publicly published port even though `/health`/`/ready` stay on
+    # it too (those carry no more than a boolean, and container
+    # orchestrators expect to reach them on a pod's primary port).
+    metrics_port: int = 9100
+
+    # OTLP/HTTP endpoint traces are exported to (e.g. a local Jaeger/Tempo
+    # collector's "http://otel-collector:4318/v1/traces"). Empty by
+    # default: spans are still created (propagation across the pipeline
+    # works and is testable either way) but nothing leaves the process —
+    # the same fail-closed-until-configured shape as EGRESS_ALLOWED_HOSTS.
+    otel_exporter_otlp_endpoint: str = ""
+    otel_service_name: str = "lunatic-siem-backend"
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
