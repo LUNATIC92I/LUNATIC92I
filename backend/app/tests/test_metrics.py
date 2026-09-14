@@ -55,6 +55,7 @@ _COUNTERS: dict[str, int] = {
     "hunt_exports_total": 2,
     "playbook_runs_total": 2,
     "playbook_approvals_total": 1,
+    "auth_rate_limited_total": 1,
 }
 
 _HISTOGRAMS: dict[str, int] = {

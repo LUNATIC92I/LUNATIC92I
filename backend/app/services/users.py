@@ -30,6 +30,22 @@ class DuplicateEmail(ValueError):
     pass
 
 
+class InsufficientPrivilege(PermissionError):
+    """Raised when an actor without an elevated role tries to grant one.
+    `user:write` alone is not enough to hand out `ORG_ADMIN`/`SUPER_ADMIN`
+    — otherwise any role holding it (`SOC_MANAGER`) could mint its own
+    tenant admin, a vertical privilege escalation `require_permission`'s
+    single resource:action check has no way to express (Phase 17,
+    OWASP API5:2023 Broken Function Level Authorization)."""
+
+
+# Roles that can manage the tenant's own user base outright. Granting one
+# of these is different in kind from every other role grant: it is
+# handing out the ability to grant *any* role, including this one — so
+# only an actor who already holds one may do it.
+_ELEVATED_ROLES = {"SUPER_ADMIN", "ORG_ADMIN"}
+
+
 async def roles_for(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
     stmt = (
         select(Role.name)
@@ -37,6 +53,16 @@ async def roles_for(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
         .where(UserRole.user_id == user_id)
     )
     return [name for (name,) in (await db.execute(stmt)).all()]
+
+
+async def _assert_can_grant_role(
+    db: AsyncSession, *, actor_id: uuid.UUID | None, role: str
+) -> None:
+    if role not in _ELEVATED_ROLES:
+        return
+    actor_roles = await roles_for(db, actor_id) if actor_id is not None else []
+    if not _ELEVATED_ROLES.intersection(actor_roles):
+        raise InsufficientPrivilege(f"granting {role} requires an existing org admin")
 
 
 async def create_user(
@@ -52,6 +78,7 @@ async def create_user(
 ) -> tuple[User, list[str]]:
     role_row = await db.scalar(select(Role).where(Role.name == role))
     assert role_row is not None  # nosec B101 - role is validated against ROLE_NAMES by the request schema
+    await _assert_can_grant_role(db, actor_id=actor_id, role=role)
 
     user = User(
         tenant_id=tenant_id,
@@ -104,6 +131,7 @@ async def update_user(
     if role is not None:
         role_row = await db.scalar(select(Role).where(Role.name == role))
         assert role_row is not None  # nosec B101 - role is validated against ROLE_NAMES by the request schema
+        await _assert_can_grant_role(db, actor_id=actor_id, role=role)
         await db.execute(delete(UserRole).where(UserRole.user_id == user.id))
         db.add(UserRole(user_id=user.id, role_id=role_row.id, tenant_id=tenant_id))
 

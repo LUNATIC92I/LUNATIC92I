@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     max_failed_login_attempts: int = 5
     lockout_duration_minutes: int = 15
 
+    # Per-IP rate limits on the auth endpoints (Phase 17, OWASP ASVS
+    # V2.2.1): account lockout above stops repeated guesses against *one*
+    # account, but does nothing about a low-and-slow spray across *many*
+    # accounts from one source, or a flood of organization registrations.
+    # These are a second, independent control on top of lockout, not a
+    # replacement for it.
+    auth_login_rate_limit_per_minute: int = 20
+    auth_register_rate_limit_per_hour: int = 10
+    auth_refresh_rate_limit_per_minute: int = 60
+
     database_url: str = "postgresql+asyncpg://lunatic:lunatic@localhost:5432/lunatic_siem"
     redis_url: str = "redis://localhost:6379/0"
 

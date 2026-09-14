@@ -10,10 +10,17 @@ concurrency:
   cancel-in-progress: true
 
 # Pipeline order mirrors spec §31: lint -> type check -> unit tests ->
-# dependency scan -> container scan -> build. Integration tests, the
-# automated security-test suite (spec §30), and deploy are added as their
-# owning phases land (see docs/DEVELOPMENT_PLAN.md, Phases 3+, 17, 20) —
-# they are not stubbed here as always-green no-ops.
+# dependency scan -> container scan -> build. Deploy is added when Phase 20
+# lands (see docs/DEVELOPMENT_PLAN.md) — it is not stubbed here as an
+# always-green no-op.
+#
+# The Phase 17 automated security suite (spec §30 — SQLi, command
+# injection, XSS, SSRF, path traversal, IDOR, privilege escalation, broken
+# auth/authz, tenant isolation, rate-limit bypass, JWT manipulation,
+# replay: app/tests/test_security_suite.py) already runs as part of
+# `backend-tests` below, so a finding there already fails the same build
+# every other test failure does. `backend-security-suite` runs it again on
+# its own so the pipeline names it explicitly, per docs/SECURITY_CHECKLIST.md.
 
 jobs:
   backend-lint-and-typecheck:
@@ -121,6 +128,73 @@ jobs:
       - run: pip-audit
         working-directory: backend
 
+  backend-security-suite:
+    name: Backend / security test suite (spec §30)
+    runs-on: ubuntu-latest
+    needs: backend-lint-and-typecheck
+    services:
+      postgres:
+        image: postgres:16.4-bookworm
+        env:
+          POSTGRES_USER: lunatic
+          POSTGRES_PASSWORD: ci-test-only-password
+          POSTGRES_DB: lunatic_siem_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lunatic -d lunatic_siem_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      opensearch:
+        image: opensearchproject/opensearch:2.17.1
+        env:
+          discovery.type: single-node
+          bootstrap.memory_lock: "false"
+          OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+          OPENSEARCH_INITIAL_ADMIN_PASSWORD: Ci-Test-Only-Password-1!
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sk -u admin:Ci-Test-Only-Password-1! https://localhost:9200/_cluster/health || exit 1"
+          --health-interval 15s --health-timeout 10s --health-retries 20
+          --health-start-period 60s
+    env:
+      DATABASE_URL: postgresql+asyncpg://lunatic:ci-test-only-password@localhost:5432/lunatic_siem_test
+      JWT_SECRET_KEY: ci-test-only-secret-not-for-production
+      MFA_ENCRYPTION_KEY: BAXh6NR-CnCtWopK3oargngPR5TujRZgroL-3xioUI0=
+      MAX_FAILED_LOGIN_ATTEMPTS: "3"
+      REDIS_URL: redis://localhost:6379/0
+      OPENSEARCH_URL: https://localhost:9200
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: Ci-Test-Only-Password-1!
+      OPENSEARCH_VERIFY_CERTS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      - name: Enable required Postgres extensions
+        run: |
+          python -c "
+          import psycopg2
+          conn = psycopg2.connect('${{ env.DATABASE_URL }}'.replace('postgresql+asyncpg', 'postgresql'))
+          conn.autocommit = True
+          conn.cursor().execute('CREATE EXTENSION IF NOT EXISTS pgcrypto')
+          conn.close()
+          "
+        working-directory: backend
+      - run: pytest app/tests/test_security_suite.py -v
+        working-directory: backend
+
   frontend-lint-typecheck-build:
     name: Frontend / lint + type check + build
     runs-on: ubuntu-latest
@@ -154,7 +228,7 @@ jobs:
   docker-build-and-scan:
     name: Docker build + Trivy scan
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-lint-typecheck-build]
+    needs: [backend-tests, backend-security-suite, frontend-lint-typecheck-build]
     strategy:
       matrix:
         service: [backend, frontend]

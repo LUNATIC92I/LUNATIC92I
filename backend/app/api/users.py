@@ -93,6 +93,8 @@ async def create_user(
         raise HTTPException(
             status.HTTP_409_CONFLICT, "a user with this email already exists"
         ) from exc
+    except service.InsufficientPrivilege as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     await ctx.db.commit()
     return UserPublic(
         id=str(user.id),
@@ -125,6 +127,8 @@ async def update_user(
         )
     except service.UserNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "user not found") from exc
+    except service.InsufficientPrivilege as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     await ctx.db.commit()
     return UserPublic(
         id=str(user.id),

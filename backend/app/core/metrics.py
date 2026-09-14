@@ -286,3 +286,14 @@ playbook_approvals_total = Counter(
     "Destructive-step approval decisions (ARCHITECTURE.md §7.5)",
     ["outcome"],
 )
+
+auth_rate_limited_total = Counter(
+    "auth_rate_limited_total",
+    (
+        "Auth requests refused for exceeding the per-IP quota — a second, "
+        "independent control on top of per-account lockout (spec §30, "
+        "OWASP ASVS V2.2.1). Sustained values point at a distributed "
+        "credential-stuffing or mass-registration attempt."
+    ),
+    ["action"],
+)

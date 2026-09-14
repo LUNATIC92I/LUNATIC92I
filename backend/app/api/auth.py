@@ -1,7 +1,11 @@
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from app.auth.dependencies import AuthContext, get_auth_context
 from app.core.config import get_settings
+from app.core.metrics import auth_rate_limited_total
+from app.core.redis import get_redis
 from app.models.identity import User
 from app.schemas.auth import (
     AccessTokenResponse,
@@ -17,6 +21,31 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _REFRESH_COOKIE_NAME = "refresh_token"
 _REFRESH_COOKIE_PATH = "/auth"
+
+
+async def _enforce_ip_rate_limit(
+    request: Request, *, action: str, limit: int, window_seconds: int
+) -> None:
+    """A second, independent control on top of per-account lockout (OWASP
+    ASVS V2.2.1): lockout alone does nothing about a low-and-slow spray
+    across many different accounts, or a flood of organization
+    registrations, from one source. Fixed-window per-IP counter, the same
+    shape as the ingestion and hunt-export rate limiters.
+
+    A request with no client IP (only possible from a non-HTTP test
+    transport) is allowed through rather than guessed at — there is no
+    real deployment where a request reaches this API without one."""
+    if request.client is None:
+        return
+    redis = get_redis()
+    window = int(time.time() // window_seconds)
+    key = f"auth:ratelimit:{action}:{request.client.host}:{window}"
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, window_seconds)
+    if count > limit:
+        auth_rate_limited_total.labels(action=action).inc()
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many requests")
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:
@@ -38,8 +67,15 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
     status_code=status.HTTP_201_CREATED,
 )
 async def register_organization(
-    payload: RegisterOrganizationRequest,
+    payload: RegisterOrganizationRequest, request: Request
 ) -> RegisterOrganizationResponse:
+    settings = get_settings()
+    await _enforce_ip_rate_limit(
+        request,
+        action="register",
+        limit=settings.auth_register_rate_limit_per_hour,
+        window_seconds=3600,
+    )
     try:
         org, user = await auth_service.register_organization(
             organization_name=payload.organization_name,
@@ -59,6 +95,12 @@ async def register_organization(
 @router.post("/login", response_model=AccessTokenResponse)
 async def login(payload: LoginRequest, request: Request, response: Response) -> AccessTokenResponse:
     settings = get_settings()
+    await _enforce_ip_rate_limit(
+        request,
+        action="login",
+        limit=settings.auth_login_rate_limit_per_minute,
+        window_seconds=60,
+    )
     try:
         access_token, refresh_token = await auth_service.authenticate(
             organization_slug=payload.organization_slug,
@@ -90,6 +132,12 @@ async def login(payload: LoginRequest, request: Request, response: Response) -> 
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh(request: Request, response: Response) -> AccessTokenResponse:
     settings = get_settings()
+    await _enforce_ip_rate_limit(
+        request,
+        action="refresh",
+        limit=settings.auth_refresh_rate_limit_per_minute,
+        window_seconds=60,
+    )
     refresh_token = request.cookies.get(_REFRESH_COOKIE_NAME)
     if refresh_token is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing refresh token")

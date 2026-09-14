@@ -28,6 +28,7 @@ from app.core.observability import (
     redis_ready,
     start_observability_server,
 )
+from app.core.security_headers import add_security_headers
 from app.core.tracing import configure_tracing
 
 
@@ -97,6 +98,8 @@ def create_app() -> FastAPI:
             method=request.method, path=request.url.path, status=response.status_code
         ).inc()
         return response
+
+    app.middleware("http")(add_security_headers)
 
     return app
 

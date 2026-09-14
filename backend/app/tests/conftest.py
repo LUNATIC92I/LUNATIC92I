@@ -33,6 +33,7 @@ from sqlalchemy import text  # noqa: E402
 
 from alembic import command  # noqa: E402
 from app.core.db import async_session_factory  # noqa: E402
+from app.core.redis import get_redis  # noqa: E402
 from app.main import app  # noqa: E402
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -77,6 +78,20 @@ async def _clean_tables():
             )
         )
         await db.commit()
+    # The auth endpoints' per-IP rate limiter (Phase 17) keys on the test
+    # transport's one fixed client IP, so without this every test that
+    # calls /auth/login, /auth/register-organization or /auth/refresh would
+    # share one counter with every other such test in the whole session —
+    # exactly the kind of cross-test state leak Postgres truncation above
+    # already exists to prevent.
+    redis = get_redis()
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor, match="auth:ratelimit:*", count=500)
+        if keys:
+            await redis.delete(*keys)
+        if cursor == 0:
+            break
 
 
 @pytest_asyncio.fixture
