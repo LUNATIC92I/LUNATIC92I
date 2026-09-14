@@ -61,3 +61,31 @@ security:
 
 networkPolicy:
   create: false # covered by kubernetes/data-tier/networkpolicy.yaml
+
+# Point-in-time recovery of indexed event history (docs/BACKUP_RESTORE.md)
+# needs the repository-s3 plugin, which the stock image below does NOT
+# ship with (verified directly: `_nodes/plugins` on a real instance lists
+# opensearch-index-management, opensearch-security, etc., but no
+# repository-s3) — install it via an init container into the shared
+# plugins volume before the main container starts, then run
+# scripts/bootstrap_opensearch_snapshots.sh once to register the S3
+# repository and the daily Snapshot Management policy.
+extraInitContainers:
+  - name: install-repository-s3
+    image: opensearchproject/opensearch:2.17.1
+    command:
+      - /usr/share/opensearch/bin/opensearch-plugin
+      - install
+      - --batch
+      - repository-s3
+    volumeMounts:
+      - name: plugins
+        mountPath: /usr/share/opensearch/plugins
+
+extraVolumes:
+  - name: plugins
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: plugins
+    mountPath: /usr/share/opensearch/plugins

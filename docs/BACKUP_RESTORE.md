@@ -109,16 +109,57 @@ never the data or policies once restored.
 | RPO | Bounded by WAL archiving interval — effectively seconds, not the nightly backup window, once continuous archiving is configured |
 | RTO | Depends on database size and object-store throughput; not measured here — measure it against your actual backup size before quoting a number, the same discipline `docs/PERFORMANCE_BENCHMARK.md` applies to load numbers |
 
-## Redis and OpenSearch
+## Redis
 
-Both are replication-based HA in `kubernetes/data-tier/` (surviving a
-node failure), not point-in-time backup. Redis Streams data
-(`events.raw`, `events.normalized`, etc.) is a transient processing
-queue, not a system of record — OpenSearch and PostgreSQL are. Losing
-Redis's in-flight stream contents loses in-flight events, not history;
-add `redis-cli --rdb` snapshots on a schedule if that gap matters for
-your environment. OpenSearch's own snapshot-repository mechanism
-(pointed at the same object store as the PostgreSQL backups) is the
-correct tool for point-in-time recovery of indexed event history and is
-not yet configured here — tracked as follow-up work, not silently
-assumed done.
+Replication-based HA only (`kubernetes/data-tier/`, surviving a node
+failure), not point-in-time backup. Redis Streams data (`events.raw`,
+`events.normalized`, etc.) is a transient processing queue, not a system
+of record — OpenSearch and PostgreSQL are. Losing Redis's in-flight
+stream contents loses in-flight events, not history; add `redis-cli
+--rdb` snapshots on a schedule if that gap matters for your environment.
+
+## OpenSearch
+
+Point-in-time recovery of indexed event history, via OpenSearch's own
+snapshot-repository mechanism — rehearsed the same way as the PostgreSQL
+drill above, not just configured and assumed to work:
+
+1. Registered a real filesystem snapshot repository against a running
+   OpenSearch instance (`PUT /_snapshot/drill_repo`) and verified it
+   (`POST /_snapshot/drill_repo/_verify`).
+2. Took a real snapshot of `lunatic-detections-v1-000002`, an index with
+   genuine data (10 documents from earlier test runs):
+   `PUT /_snapshot/drill_repo/drill-snap-1?wait_for_completion=true` —
+   `"state":"SUCCESS"`.
+3. **Deleted the index** (`DELETE /lunatic-detections-v1-000002`) —
+   confirmed gone (`404 index_not_found_exception`).
+4. Restored it from the snapshot
+   (`POST /_snapshot/drill_repo/drill-snap-1/_restore?wait_for_completion=true`).
+5. Verified: **the restored index has exactly 10 documents** — the same
+   count as before deletion. Recovery confirmed, not assumed.
+
+Production setup (`scripts/bootstrap_opensearch_snapshots.sh`, run once
+by an operator — same "credentialed, rare, not run by the application"
+posture as `scripts/bootstrap_backup_role.sql`):
+
+1. Registers an S3-backed repository instead of the local filesystem one
+   used above. Requires the `repository-s3` plugin, which the stock
+   `opensearchproject/opensearch` image does **not** ship with —
+   verified directly (`GET /_nodes/plugins` on a real instance lists
+   `opensearch-index-management`, `opensearch-security`, etc., but no
+   `repository-s3`). `kubernetes/data-tier/values-opensearch-ha.yaml`
+   installs it via an init container into a shared plugins volume.
+2. Creates a daily Snapshot Management policy
+   (`PUT /_plugins/_sm/policies/lunatic-daily-snapshots`) — OpenSearch's
+   own built-in scheduler, part of the index-management plugin that
+   *is* already present, so no extra plugin is needed for the scheduling
+   half. 30-day retention, matching PostgreSQL's. The exact policy JSON
+   in the bootstrap script was verified against a real instance (created
+   successfully via the SM API, confirmed by reading the document back)
+   before being written into the script — only the S3 registration step
+   itself couldn't be exercised end-to-end here, for the ordinary reason
+   that no real S3 bucket exists in this sandbox.
+
+Restore is the same operation demonstrated in the drill above
+(`_snapshot/<repo>/<snapshot>/_restore`), against whichever repository
+your environment actually points at.

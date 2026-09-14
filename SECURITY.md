@@ -73,10 +73,6 @@ forever.
   concrete fixes are already identified (a failover-aware proxy, or a
   `Sentinel`-aware client) — tracked, not silently assumed solved by
   "Redis HA" being present in `kubernetes/data-tier/`.
-- **OpenSearch snapshot repository is not yet configured.** HA
-  (replication across 3 nodes) is; point-in-time recovery of indexed
-  event history is not, per `docs/BACKUP_RESTORE.md`'s own explicit
-  statement of what is and isn't covered.
 - **CSP is tuned for an API, not the frontend SPA**, and there is no
   dedicated WAF/bot-detection layer beyond the application's own
   fixed-window rate limits — both already stated in
@@ -84,9 +80,12 @@ forever.
   here for one consolidated view.
 
 Nothing in this list is Critical or High severity by this project's own
-`docs/SECURITY_CHECKLIST.md` taxonomy; each is either an intentional,
-documented trade-off (syslog UDP, Redis Streams durability, HSM) or a
-concretely scoped follow-up with an identified fix (Sentinel awareness,
-OpenSearch snapshots). The consumer-naming finding this list previously
-carried has since been fixed (`app/core/eventbus.py::consumer_identity()`)
-— see `docs/KUBERNETES.md`'s "Horizontal scaling correctness" section.
+`docs/SECURITY_CHECKLIST.md` taxonomy; each remaining item is an
+intentional, documented trade-off (syslog UDP, Redis Streams durability,
+HSM), or a concretely scoped follow-up with an identified fix (Sentinel
+awareness). Two findings this list previously carried have since been
+fixed: consumer naming
+(`app/core/eventbus.py::consumer_identity()` — see `docs/KUBERNETES.md`'s
+"Horizontal scaling correctness" section) and the OpenSearch snapshot
+repository (`scripts/bootstrap_opensearch_snapshots.sh`, rehearsed
+end-to-end — see `docs/BACKUP_RESTORE.md`'s OpenSearch section).
