@@ -1,0 +1,154 @@
+name: Performance benchmark
+
+# Scheduled, not per-push (spec §24): a load test takes minutes, needs a
+# full stack (API + 4 workers + Postgres/Redis/OpenSearch), and its value
+# is trend data over time, not a pass/fail gate on an individual commit.
+# `workflow_dispatch` allows an on-demand run when investigating a
+# regression. Results are archived as a workflow artifact on every run;
+# docs/PERFORMANCE_BENCHMARK.md is the durable, human-read report and is
+# updated manually when a run's numbers are worth recording there.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: perf-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Load test against a real stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.4-bookworm
+        env:
+          POSTGRES_USER: lunatic
+          POSTGRES_PASSWORD: perf-ci-only-password
+          POSTGRES_DB: lunatic_perf
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lunatic -d lunatic_perf"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      opensearch:
+        image: opensearchproject/opensearch:2.17.1
+        env:
+          discovery.type: single-node
+          bootstrap.memory_lock: "false"
+          OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+          OPENSEARCH_INITIAL_ADMIN_PASSWORD: Perf-Ci-Only-Password-1!
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sk -u admin:Perf-Ci-Only-Password-1! https://localhost:9200/_cluster/health || exit 1"
+          --health-interval 15s --health-timeout 10s --health-retries 20
+          --health-start-period 60s
+    env:
+      # A benchmark-only database, never the dev/test/production one (spec
+      # §24 acceptance criterion: no production credentials or data).
+      DATABASE_URL: postgresql+asyncpg://lunatic:perf-ci-only-password@localhost:5432/lunatic_perf
+      JWT_SECRET_KEY: perf-ci-only-secret-not-for-production
+      MFA_ENCRYPTION_KEY: BAXh6NR-CnCtWopK3oargngPR5TujRZgroL-3xioUI0=
+      REDIS_URL: redis://localhost:6379/0
+      OPENSEARCH_URL: https://localhost:9200
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: Perf-Ci-Only-Password-1!
+      OPENSEARCH_VERIFY_CERTS: "false"
+      DETECTION_RULES_PATH: ${{ github.workspace }}/rules
+      PLAYBOOKS_PATH: ${{ github.workspace }}/playbooks
+      # The API keeps the config default (9100); each worker below is
+      # given its own port explicitly — they cannot share one.
+      # Raised well above default so the load test measures pipeline
+      # capacity, not its own rate limiter — a distinct control from
+      # anything this run is trying to characterize.
+      AUTH_LOGIN_RATE_LIMIT_PER_MINUTE: "100000"
+      AUTH_REGISTER_RATE_LIMIT_PER_HOUR: "100000"
+      AUTH_REFRESH_RATE_LIMIT_PER_MINUTE: "100000"
+      INGEST_RATE_LIMIT_PER_MINUTE: "1000000"
+      MAX_FAILED_LOGIN_ATTEMPTS: "1000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev,perf]"
+        working-directory: backend
+
+      - name: Enable required Postgres extensions
+        run: |
+          python -c "
+          import psycopg2
+          conn = psycopg2.connect('${{ env.DATABASE_URL }}'.replace('postgresql+asyncpg', 'postgresql'))
+          conn.autocommit = True
+          conn.cursor().execute('CREATE EXTENSION IF NOT EXISTS pgcrypto')
+          conn.close()
+          "
+        working-directory: backend
+
+      - name: Run migrations
+        run: python -m alembic upgrade head
+        working-directory: backend
+
+      - name: Start API and pipeline workers
+        run: |
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/perf_api.log 2>&1 &
+          echo $! > /tmp/perf_api.pid
+          declare -A ports=([parser]=9101 [indexer]=9102 [detection]=9103 [alert]=9104)
+          for name in parser indexer detection alert; do
+            METRICS_PORT="${ports[$name]}" nohup python -m "app.workers.${name}_worker" \
+              > "/tmp/perf_${name}.log" 2>&1 &
+            echo $! > "/tmp/perf_${name}.pid"
+          done
+        working-directory: backend
+
+      - name: Wait for the stack to report ready
+        run: |
+          for port in 8000 9100 9101 9102 9103 9104; do
+            for _ in $(seq 1 30); do
+              curl -sf "http://localhost:${port}/ready" > /dev/null 2>&1 && break
+              sleep 2
+            done
+            curl -sf "http://localhost:${port}/ready" || {
+              echo "port ${port} never became ready"
+              exit 1
+            }
+          done
+
+      - name: End-to-end alert latency
+        run: |
+          mkdir -p perf/results
+          python perf/measure_alert_latency.py --trials 20 --host http://localhost:8000 \
+            --out perf/results/alert_latency.json
+
+      - name: Ingestion throughput + API read latency
+        run: |
+          locust -f perf/locustfile.py --host http://localhost:8000 --headless \
+            -u 30 -r 5 -t 90s --csv perf/results/mixed_load --csv-full-history --only-summary
+
+      - name: Stop the stack
+        if: always()
+        run: |
+          for name in api parser indexer detection alert; do
+            [ -f "/tmp/perf_${name}.pid" ] && kill "$(cat /tmp/perf_${name}.pid)" 2>/dev/null || true
+          done
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results-${{ github.run_id }}
+          path: |
+            perf/results/
+            /tmp/perf_*.log
+          retention-days: 90
