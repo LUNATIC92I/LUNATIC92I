@@ -5,7 +5,29 @@ import uuid
 import pytest
 
 from app.core.config import get_settings
-from app.core.eventbus import EventBusMessage, InMemoryEventBus, RedisStreamsEventBus
+from app.core.eventbus import (
+    EventBusMessage,
+    InMemoryEventBus,
+    RedisStreamsEventBus,
+    consumer_identity,
+)
+
+
+def test_consumer_identity_uses_hostname_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Kubernetes sets HOSTNAME to the pod name for every pod — using it
+    gives each replica of a Deployment a distinct Redis Streams consumer
+    identity instead of every replica sharing one hardcoded literal
+    (the Phase 19 finding this closes; see docs/KUBERNETES.md)."""
+    monkeypatch.setenv("HOSTNAME", "parser-7d8f9c-abcde")
+    assert consumer_identity("parser") == "parser-parser-7d8f9c-abcde"
+
+
+def test_consumer_identity_falls_back_without_hostname(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Matches the old hardcoded literal exactly when HOSTNAME is unset —
+    local dev without a container, some test runners — so nothing that
+    depended on the previous default behavior changes underneath it."""
+    monkeypatch.delenv("HOSTNAME", raising=False)
+    assert consumer_identity("parser") == "parser-1"
 
 
 async def _collect(bus, topic: str, group: str, consumer: str, n: int, limit_seconds: float = 5.0):

@@ -36,6 +36,7 @@ from app.core.eventbus import (
     TOPIC_DETECTIONS_CREATED,
     EventBus,
     EventBusMessage,
+    consumer_identity,
     get_event_bus,
 )
 from app.core.logging import configure_logging
@@ -302,7 +303,7 @@ class AlertWorker:
 async def run() -> None:
     configure_logging()
     configure_tracing()
-    worker = AlertWorker(bus=get_event_bus())
+    worker = AlertWorker(bus=get_event_bus(), consumer_name=consumer_identity("alerting"))
     obs = await start_observability_server(
         get_settings().metrics_port, ready_check=combine(redis_ready, postgres_ready)
     )

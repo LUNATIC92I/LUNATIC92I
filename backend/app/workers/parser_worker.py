@@ -20,6 +20,7 @@ from app.core.eventbus import (
     TOPIC_EVENTS_RAW,
     EventBus,
     EventBusMessage,
+    consumer_identity,
     get_event_bus,
 )
 from app.core.logging import configure_logging
@@ -142,7 +143,7 @@ async def run() -> None:
     configure_logging()
     configure_tracing()
     bus = get_event_bus()
-    worker = ParserWorker(bus=bus)
+    worker = ParserWorker(bus=bus, consumer_name=consumer_identity("parser"))
     obs = await start_observability_server(get_settings().metrics_port, ready_check=redis_ready)
 
     stop = asyncio.Event()

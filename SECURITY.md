@@ -73,11 +73,6 @@ forever.
   concrete fixes are already identified (a failover-aware proxy, or a
   `Sentinel`-aware client) — tracked, not silently assumed solved by
   "Redis HA" being present in `kubernetes/data-tier/`.
-- **Worker consumer names are a hardcoded literal, not per-pod.** Found
-  during the Phase 19 chaos test: this does not break the no-data-loss
-  reclaim guarantee (verified directly — see `docs/KUBERNETES.md`'s
-  chaos-test section) but does blur per-pod observability in
-  `XINFO CONSUMERS`. Cosmetic/observability, not correctness.
 - **OpenSearch snapshot repository is not yet configured.** HA
   (replication across 3 nodes) is; point-in-time recovery of indexed
   event history is not, per `docs/BACKUP_RESTORE.md`'s own explicit
@@ -92,4 +87,6 @@ Nothing in this list is Critical or High severity by this project's own
 `docs/SECURITY_CHECKLIST.md` taxonomy; each is either an intentional,
 documented trade-off (syslog UDP, Redis Streams durability, HSM) or a
 concretely scoped follow-up with an identified fix (Sentinel awareness,
-consumer naming, OpenSearch snapshots).
+OpenSearch snapshots). The consumer-naming finding this list previously
+carried has since been fixed (`app/core/eventbus.py::consumer_identity()`)
+— see `docs/KUBERNETES.md`'s "Horizontal scaling correctness" section.

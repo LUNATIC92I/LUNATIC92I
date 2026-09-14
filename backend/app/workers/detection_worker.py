@@ -43,6 +43,7 @@ from app.core.eventbus import (
     TOPIC_EVENTS_NORMALIZED,
     EventBus,
     EventBusMessage,
+    consumer_identity,
     get_event_bus,
 )
 from app.core.logging import configure_logging
@@ -310,7 +311,11 @@ def build(bus: EventBus | None = None) -> tuple[DetectionWorker, WindowedSchedul
         # worker, not just within one process (see engine.SuppressionStore).
         suppression=RedisSuppressionStore(get_redis()),
     )
-    worker = DetectionWorker(bus=bus or get_event_bus(), registry=registry)
+    worker = DetectionWorker(
+        bus=bus or get_event_bus(),
+        registry=registry,
+        consumer_name=consumer_identity("detection"),
+    )
     scheduler = WindowedScheduler(
         registry=registry,
         evaluator=WindowedEvaluator(

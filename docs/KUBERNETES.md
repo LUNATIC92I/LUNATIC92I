@@ -60,19 +60,19 @@ authored with `suppression_seconds == 0` would double-fire under >1
 replica; the rule schema doesn't currently forbid that combination, which
 is worth tightening if custom windowed rules become common.
 
-One nuance found while writing this: every worker's consumer name
-defaults to a hardcoded literal (`"parser-1"`, `"detection-1"`, etc. —
-see each `*Worker.__init__`), not a per-pod identity. Two replicas of the
-same worker therefore share one logical Redis Streams consumer name.
-This does not break the no-data-loss guarantee — `claim_stale()`'s
-reclaim is keyed by idle-time, not by which physical process a name used
-to belong to, so a crashed replica's orphaned pending entries are
-recovered by the survivor(s) regardless (confirmed directly, see "Chaos
-test" below) — but it does mean `XINFO CONSUMERS` can't distinguish which
-pod is doing the work. Deriving the consumer name from `HOSTNAME` (which
-Kubernetes sets to the pod name for free) would fix that observability
-gap; tracked here as a real, minor finding rather than silently
-ambient-fixed.
+**Resolved.** Every worker's consumer name used to default to a
+hardcoded literal (`"parser-1"`, `"detection-1"`, etc.), so two replicas
+of the same worker shared one logical Redis Streams consumer name. This
+never broke the no-data-loss guarantee — `claim_stale()`'s reclaim is
+keyed by idle-time, not by which physical process a name used to belong
+to, so a crashed replica's orphaned pending entries were always recovered
+by the survivor(s) regardless (confirmed directly, see "Chaos test"
+below) — but it did mean `XINFO CONSUMERS` couldn't distinguish which pod
+was doing the work. Fixed: `app/core/eventbus.py::consumer_identity()`
+derives the name from `HOSTNAME` (which Kubernetes sets to the pod name
+for every pod, no extra wiring), falling back to the old literal only
+when `HOSTNAME` is unset. Every worker's `run()`/`build()` now passes
+this explicitly (`app/tests/test_eventbus.py` covers both branches).
 
 ## Health checks and graceful shutdown
 
@@ -203,9 +203,10 @@ SIGKILL` against a live container, no mocks:
 
 This is the actual guarantee "kill a pod, no data loss" cashes out to at
 the code level, verified directly rather than assumed because the
-manifests say `replicas: 2`. The one open item this test surfaced — the
+manifests say `replicas: 2`. The one item this test surfaced — the
 shared hardcoded consumer name across replicas — is called out above
-under "Horizontal scaling correctness" rather than fixed silently.
+under "Horizontal scaling correctness" and has since been fixed
+(`consumer_identity()`), not left as a standing gap.
 
 ## Load balancer
 

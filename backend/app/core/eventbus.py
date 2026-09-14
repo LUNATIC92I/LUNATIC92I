@@ -11,6 +11,7 @@ really is swappable, not just in theory.
 import abc
 import json
 import logging
+import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -21,6 +22,25 @@ import redis.asyncio as aioredis
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def consumer_identity(prefix: str) -> str:
+    """A per-replica consumer identity for a Redis Streams consumer group.
+
+    Every worker used to hardcode a literal default (`"parser-1"`,
+    `"detection-1"`, ...), so two replicas of the same Kubernetes
+    Deployment shared one logical consumer name — reclaim
+    (`claim_stale`) still recovers a dead replica's pending entries
+    correctly regardless, since it works by idle time, not by name
+    (verified directly in the Phase 19 chaos test, docs/KUBERNETES.md),
+    but `XINFO CONSUMERS` couldn't tell the replicas apart. Kubernetes
+    sets `HOSTNAME` to the pod name for every pod with no extra wiring,
+    so using it here makes each replica's identity distinct for free.
+    Falls back to `"<prefix>-1"` — the old literal — only when `HOSTNAME`
+    is entirely unset (local dev without a container, some test runners).
+    """
+    hostname = os.environ.get("HOSTNAME")
+    return f"{prefix}-{hostname}" if hostname else f"{prefix}-1"
 
 
 def _as_bytes(value: object) -> bytes:

@@ -29,6 +29,7 @@ from app.core.eventbus import (
     TOPIC_EVENTS_NORMALIZED,
     EventBus,
     EventBusMessage,
+    consumer_identity,
     get_event_bus,
 )
 from app.core.logging import configure_logging
@@ -181,7 +182,7 @@ def detection_worker(bus: EventBus, client: Any) -> "IndexerWorker":
         bus=bus,
         indexer=EventIndexer(client, alias=DETECTION_ALIAS, id_field="detection_id"),
         pipeline=EnrichmentPipeline(()),
-        consumer_name="detection-indexer-1",
+        consumer_name=consumer_identity("detection-indexer"),
         topic=TOPIC_DETECTIONS_CREATED,
         consumer_group=DETECTION_CONSUMER_GROUP,
         id_field="detection_id",
@@ -195,7 +196,9 @@ async def run() -> None:
     await bootstrap_indices(client)
 
     bus = get_event_bus()
-    events = IndexerWorker(bus=bus, indexer=EventIndexer(client))
+    events = IndexerWorker(
+        bus=bus, indexer=EventIndexer(client), consumer_name=consumer_identity("indexer")
+    )
     detections = detection_worker(bus, client)
     obs = await start_observability_server(
         get_settings().metrics_port, ready_check=combine(redis_ready, opensearch_ready)

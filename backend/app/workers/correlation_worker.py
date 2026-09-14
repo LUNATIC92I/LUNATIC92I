@@ -28,6 +28,7 @@ from app.core.eventbus import (
     TOPIC_EVENTS_NORMALIZED,
     EventBus,
     EventBusMessage,
+    consumer_identity,
     get_event_bus,
 )
 from app.core.logging import configure_logging
@@ -152,7 +153,9 @@ def build(bus: EventBus | None = None) -> CorrelationWorker:
         suppression=RedisSuppressionStore(redis, prefix="correlation:suppress:"),
         max_clock_skew_seconds=settings.correlation_max_clock_skew_seconds,
     )
-    return CorrelationWorker(bus=bus or get_event_bus(), engine=engine)
+    return CorrelationWorker(
+        bus=bus or get_event_bus(), engine=engine, consumer_name=consumer_identity("correlation")
+    )
 
 
 async def run() -> None:
