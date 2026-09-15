@@ -64,9 +64,11 @@ regression test added:
   tests because none had ever let a subscribe() call sit genuinely idle.
 - **Phase 19:** a chaos test that actually `SIGKILL`ed a worker mid-batch
   (50,500 real events through the real pipeline) proved the no-data-loss
-  reclaim guarantee for real, and found the one thing it doesn't yet
-  cover (Redis Sentinel failover isn't transparent to the app yet —
-  documented, not hidden).
+  reclaim guarantee for real, and found the one thing it didn't yet cover
+  at the time (Redis Sentinel failover wasn't transparent to the app —
+  documented, not hidden, and since closed: `app/core/redis.py`'s
+  Sentinel-aware client, verified against a real cluster with the actual
+  master container killed).
 - **Phase 20:** a rehearsed backup drill found that `pg_dump` with the
   application's own database role fails outright, because Row-Level
   Security is enforced even for the table owner — the correct posture

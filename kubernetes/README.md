@@ -8,7 +8,7 @@ Kubernetes manifests for production deployment (Phase 19):
   Ingress for the API and frontend.
 - `data-tier/` — HA PostgreSQL (CloudNativePG), Redis (Sentinel), and
   OpenSearch (3-node cluster), each with its own README covering install
-  order and known gaps.
+  order.
 
 See `docs/KUBERNETES.md` for the full picture: deployment instructions,
 horizontal-scaling correctness per workload, health checks and graceful

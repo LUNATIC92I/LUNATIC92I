@@ -86,24 +86,31 @@ hand-editing the Service.
 
 ## Redis Sentinel failover
 
-Also automatic at the *data* layer — Sentinel promotes a replica. **This
-platform's own workers do not yet follow that promotion automatically**
-(the gap documented in `kubernetes/data-tier/values-redis-ha.yaml` and
-`docs/KUBERNETES.md`): `RedisStreamsEventBus` holds a static connection
-to whatever `REDIS_URL` pointed at when the process started. Until the
-follow-up work described there lands (a failover-aware proxy in front of
-Redis, or a `Sentinel`-aware client), a Redis failover requires a manual
-step:
+Automatic at both layers. Sentinel promotes a replica at the *data*
+layer, and every backend Redis client — `RedisStreamsEventBus` included —
+follows that promotion on its own, with no worker restart: set
+`REDIS_SENTINEL_HOSTS` (comma-separated `host:port` Sentinel addresses)
+and `REDIS_SENTINEL_SERVICE_NAME` (the `masterSet` name, `mymaster` for
+the shipped `values-redis-ha.yaml`), and `app/core/redis.py::build_redis_client()`
+builds every client through redis-py's own `Sentinel` class instead of a
+static `redis://` connection — it re-resolves the current master on each
+command rather than remembering whichever pod was master at process
+start. Verified directly against a real local Redis+Sentinel cluster:
+the actual master container was killed mid-run and the same client
+continued serving requests against the promoted replica once Sentinel's
+own detection window elapsed, with no data lost.
+
+Nothing to do manually — confirm it happened rather than assume it:
 
 ```bash
 # Confirm the new master
 redis-cli -h <sentinel-host> -p 26379 sentinel get-master-addr-by-name mymaster
-# Restart every worker so it reconnects (the Service/DNS name should
-# already point at the new master if fronted correctly; if REDIS_URL
-# names a pod directly rather than a stable Service, that is also worth
-# fixing before this runbook step is needed again)
-kubectl rollout restart deployment -n lunatic-siem parser indexer detection correlation alerting
 ```
+
+If a worker's logs show sustained connection errors past Sentinel's own
+detection window (`down-after-milliseconds`), that is itself the
+incident — check `REDIS_SENTINEL_HOSTS` is actually set for that
+workload before assuming the client isn't following the failover.
 
 ## OpenSearch node loss
 

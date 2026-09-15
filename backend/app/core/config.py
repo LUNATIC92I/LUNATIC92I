@@ -48,6 +48,17 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://lunatic:lunatic@localhost:5432/lunatic_siem"
     redis_url: str = "redis://localhost:6379/0"
+    # Comma-separated "host:port" pairs for Redis Sentinel (default port
+    # 26379 if omitted). Empty (the default) means every Redis client in
+    # this app connects to `redis_url` directly, exactly as before this
+    # setting existed. When set, every Redis client — the EventBus and
+    # everything using get_redis() alike — discovers the current master
+    # through Sentinel instead, and keeps following it across a failover
+    # (app/core/redis.py::build_redis_client): this closes the gap
+    # documented in kubernetes/data-tier/values-redis-ha.yaml, where a
+    # static redis_url connection does not notice a promoted replica.
+    redis_sentinel_hosts: str = ""
+    redis_sentinel_service_name: str = "mymaster"
 
     opensearch_url: str = "https://localhost:9200"
     opensearch_username: str = ""

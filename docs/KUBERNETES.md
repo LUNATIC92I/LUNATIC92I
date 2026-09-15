@@ -16,8 +16,10 @@ Manifests live in `kubernetes/`:
 - `kubernetes/data-tier/` — PostgreSQL (CloudNativePG), Redis (Bitnami
   chart, Sentinel mode) and OpenSearch (official chart, 3-node cluster),
   each in their own `lunatic-data` namespace. See that directory's own
-  `README.md` for install order and a documented gap (Redis Sentinel
-  failover is not yet transparent to `RedisStreamsEventBus`).
+  `README.md` for install order. A Sentinel-promoted master is followed
+  transparently by every backend Redis client (`REDIS_SENTINEL_HOSTS`,
+  `app/core/redis.py::build_redis_client()`) — no manual worker restart
+  needed after a failover.
 
 Before applying either, fill in the real values in
 `kubernetes/base/secret.yaml` and `kubernetes/data-tier/postgres-cluster.yaml`

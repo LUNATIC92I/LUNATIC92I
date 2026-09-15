@@ -65,14 +65,6 @@ forever.
   supported (`docs/RUNBOOK.md`'s secret-rotation section) but no
   HSM-backed signing. A future hardening item for regulated deployments,
   not a gap in the current threat model's own risk acceptance.
-- **Redis Sentinel failover is not yet transparent to the application.**
-  `RedisStreamsEventBus` holds a static connection; a Sentinel-promoted
-  master requires a manual worker restart today
-  (`docs/RUNBOOK.md`'s Redis Sentinel section,
-  `kubernetes/data-tier/values-redis-ha.yaml`'s own detailed note). Two
-  concrete fixes are already identified (a failover-aware proxy, or a
-  `Sentinel`-aware client) — tracked, not silently assumed solved by
-  "Redis HA" being present in `kubernetes/data-tier/`.
 - **CSP is tuned for an API, not the frontend SPA**, and there is no
   dedicated WAF/bot-detection layer beyond the application's own
   fixed-window rate limits — both already stated in
@@ -82,10 +74,15 @@ forever.
 Nothing in this list is Critical or High severity by this project's own
 `docs/SECURITY_CHECKLIST.md` taxonomy; each remaining item is an
 intentional, documented trade-off (syslog UDP, Redis Streams durability,
-HSM), or a concretely scoped follow-up with an identified fix (Sentinel
-awareness). Two findings this list previously carried have since been
-fixed: consumer naming
+HSM). Three findings this list previously carried have since been fixed:
+consumer naming
 (`app/core/eventbus.py::consumer_identity()` — see `docs/KUBERNETES.md`'s
-"Horizontal scaling correctness" section) and the OpenSearch snapshot
+"Horizontal scaling correctness" section), the OpenSearch snapshot
 repository (`scripts/bootstrap_opensearch_snapshots.sh`, rehearsed
-end-to-end — see `docs/BACKUP_RESTORE.md`'s OpenSearch section).
+end-to-end — see `docs/BACKUP_RESTORE.md`'s OpenSearch section), and Redis
+Sentinel failover transparency (`app/core/redis.py::build_redis_client()`
+now builds every Redis client — the EventBus included — through
+redis-py's own `Sentinel` class when `REDIS_SENTINEL_HOSTS` is
+configured, so a promoted master is followed automatically with no
+worker restart; verified against a real local Redis+Sentinel cluster
+with the actual master container killed mid-run).

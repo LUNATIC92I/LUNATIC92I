@@ -42,20 +42,24 @@ Then deploy the app tier (`kubernetes/base/`) — its ConfigMap/Secret
 already reference the exact Service names these three produce
 (`postgres-rw`, `redis-master`, `opensearch-cluster-master`).
 
-## Known gap: Redis failover is not yet fully transparent to the app
+## Redis failover is transparent to the app
 
-Sentinel mode here delivers real automatic master promotion. What it does
-NOT yet deliver on its own is the application noticing a promotion
-happened: `RedisStreamsEventBus` (`backend/app/core/eventbus.py`) opens a
-single `redis://` connection via `redis.asyncio.from_url()`, which has no
-Sentinel-awareness — after a failover it keeps addressing the pod that
-used to be master. This is called out in detail at the top of
-`values-redis-ha.yaml` along with the two ways to close it (a
-failover-aware proxy in front of Redis, or making `RedisStreamsEventBus`
-build its client through redis-py's `Sentinel` class instead of a bare
-URL). Recorded here rather than glossed over, because "Redis HA" as
-shipped in this phase means the store recovers on its own — it does not
-yet mean the app reconnects to the new master without a restart.
+Sentinel mode here delivers real automatic master promotion, and the
+application follows it automatically too: set `REDIS_SENTINEL_HOSTS`
+(comma-separated `host:port` Sentinel addresses — the `redis-sentinel`
+Service this chart creates) and `REDIS_SENTINEL_SERVICE_NAME` (the
+`masterSet` value below, `mymaster`) on every backend deployment.
+`app/core/redis.py::build_redis_client()` then builds every Redis
+client — `RedisStreamsEventBus` (`backend/app/core/eventbus.py`)
+included — through redis-py's own `Sentinel` class instead of a bare
+`redis.asyncio.from_url()`, which re-resolves the current master on
+every command rather than remembering whichever pod was master when the
+process started. Verified directly, not just by reading redis-py's
+source: a real local Redis+Sentinel cluster, the actual master container
+killed mid-run, the same client continuing to serve requests against the
+promoted replica once Sentinel's own detection window elapsed, with data
+written both before and after the kill confirmed present. See
+`values-redis-ha.yaml`'s own header comment for the full detail.
 
 ## Backups
 

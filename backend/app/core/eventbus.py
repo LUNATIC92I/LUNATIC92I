@@ -20,6 +20,7 @@ from typing import cast
 import redis.asyncio as aioredis
 
 from app.core.config import get_settings
+from app.core.redis import build_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -137,13 +138,18 @@ class RedisStreamsEventBus(EventBus):
     period of 5+ seconds with no new events (any night, any weekend) would
     crash every worker with an unhandled `redis.exceptions.TimeoutError`.
     Nothing about that is specific to a slow network; it reproduces on a
-    bare loopback connection to a healthy Redis with no messages pending."""
+    bare loopback connection to a healthy Redis with no messages pending.
+
+    Connects via `build_redis_client()` (app/core/redis.py), which
+    transparently follows a Redis Sentinel failover when Sentinel is
+    configured (`REDIS_SENTINEL_HOSTS`) instead of holding a static
+    connection to whichever node was master when this process started —
+    see that function's own docstring for why a plain `redis://` URL
+    alone cannot do that."""
 
     def __init__(self, redis_url: str) -> None:
-        self._redis: aioredis.Redis = aioredis.from_url(
-            redis_url,
-            decode_responses=False,
-            socket_timeout=(_SUBSCRIBE_BLOCK_MS / 1000) + 5,
+        self._redis: aioredis.Redis = build_redis_client(
+            redis_url, socket_timeout=(_SUBSCRIBE_BLOCK_MS / 1000) + 5
         )
 
     async def publish(self, topic: str, message: EventBusMessage) -> str:

@@ -20,6 +20,14 @@ data:
   # DATABASE_URL and REDIS_URL embed credentials and live in secret.yaml
   # instead — Settings reads full connection strings, not host/port pieces
   # (app/core/config.py), so there is nothing safe to put here for either.
+  # Sentinel addresses carry no credential of their own (the password
+  # travels in REDIS_URL, reused for the Sentinel connections too — see
+  # app/core/redis.py::build_redis_client()), so they live here instead.
+  # Empty means every Redis client falls back to a plain REDIS_URL
+  # connection; set both to make a Sentinel-promoted master transparent
+  # (see kubernetes/data-tier/values-redis-ha.yaml's header comment).
+  REDIS_SENTINEL_HOSTS: "redis-sentinel.lunatic-data.svc.cluster.local:26379"
+  REDIS_SENTINEL_SERVICE_NAME: "mymaster"
   # Cross-namespace: OpenSearch lives in `lunatic-data`
   # (kubernetes/data-tier/), never colocated with the app tier — matches
   # whatever `clusterName`/release name values-opensearch-ha.yaml uses.
