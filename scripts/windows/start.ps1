@@ -110,7 +110,33 @@ if (-not $backendReady) {
     Write-Ok "Backend disponible."
 }
 
-# --- 5. Summary -------------------------------------------------------------
+# --- 5. Create a Desktop shortcut on first run -----------------------------
+# So every run after this one is a plain double-click on a Desktop icon,
+# with no folder to navigate into at all. Idempotent (checks for the
+# shortcut first) and non-destructive (only ever creates, never touches an
+# existing one - if the user deleted it, it is simply recreated next run).
+try {
+    $desktop = [Environment]::GetFolderPath("Desktop")
+    $shortcutPath = Join-Path $desktop "LUNATIC-IT SIEM.lnk"
+    $rootLauncher = Join-Path $repoRoot "Demarrer-LUNATIC-SIEM.bat"
+
+    if (-not (Test-Path $shortcutPath) -and (Test-Path $rootLauncher)) {
+        $wshell = New-Object -ComObject WScript.Shell
+        $shortcut = $wshell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = $rootLauncher
+        $shortcut.WorkingDirectory = $repoRoot
+        $shortcut.IconLocation = "shell32.dll,166"
+        $shortcut.Description = "Demarrer LUNATIC-IT SIEM"
+        $shortcut.Save()
+        Write-Ok "Raccourci Bureau cree : $shortcutPath"
+        Write-Host "La prochaine fois, double-cliquez simplement sur son icone."
+    }
+} catch {
+    # Non-fatal - the root .bat file still works directly either way.
+    Write-Warn "Impossible de creer le raccourci Bureau automatiquement (pas bloquant)."
+}
+
+# --- 6. Summary -------------------------------------------------------------
 Write-Host ""
 Write-Host "== Stack demarree ==" -ForegroundColor Green
 Write-Host "Frontend              : http://localhost:5173"

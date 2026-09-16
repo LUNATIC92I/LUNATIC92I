@@ -54,17 +54,23 @@ backend** rather than native `cmd.exe`/PowerShell tooling:
    `docker compose up -d --build`) work unchanged.
 
 For a one-click launch from Windows itself (no WSL2 shell needed once Docker
-Desktop is installed), double-click **`scripts\windows\start.bat`**. It is
-the Windows equivalent of the two commands above: it checks Docker Desktop
-is running, creates `.env` from `.env.example` on first run (generating a
-real Fernet key for `MFA_ENCRYPTION_KEY` — the one default that is a
-placeholder string rather than something directly usable — and leaving
-every other value as shipped, which is fine for a throwaway local run per
-that file's own comments), runs `docker compose up -d --build`, waits for
-`/health`, and opens the frontend in your default browser. It never
-overwrites an existing `.env`. Stop the stack with
-**`scripts\windows\stop.bat`** (`stop.bat -RemoveData` to also drop the
-named volumes, mirroring `docker compose down -v`).
+Desktop is installed), double-click **`Demarrer-LUNATIC-SIEM.bat`** at the
+repository root. It is the Windows equivalent of the two commands above: it
+checks Docker Desktop is running, creates `.env` from `.env.example` on
+first run (generating a real Fernet key for `MFA_ENCRYPTION_KEY` — the one
+default that is a placeholder string rather than something directly usable
+— and leaving every other value as shipped, which is fine for a throwaway
+local run per that file's own comments), runs `docker compose up -d
+--build`, waits for `/health`, and opens the frontend in your default
+browser. It never overwrites an existing `.env`.
+
+On its first successful run it also drops a **`LUNATIC-IT SIEM` shortcut on
+the Windows Desktop** pointing back at that same launcher (idempotent — it
+checks the shortcut doesn't already exist first, and a deleted shortcut is
+simply recreated next run), so every run after the first is a plain
+double-click on a Desktop icon with no folder to open at all. Stop the
+stack with **`scripts\windows\stop.bat`** (`stop.bat -RemoveData` to also
+drop the named volumes, mirroring `docker compose down -v`).
 
 ## Backend development (outside Docker)
 
