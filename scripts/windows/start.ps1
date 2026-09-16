@@ -7,7 +7,7 @@
     `cp .env.example .env && docker compose up -d --build`. Meant to be
     double-clicked via start.bat, or run directly from PowerShell.
 
-    Never overwrites an existing .env — only creates one on first run, and
+    Never overwrites an existing .env - only creates one on first run, and
     only touches MFA_ENCRYPTION_KEY in it (the one value in .env.example
     that is a placeholder string, not a usable default: it is not valid
     base64, so cryptography.fernet.Fernet() rejects it the first time MFA
@@ -21,7 +21,15 @@ param(
     [switch]$NoBrowser
 )
 
-$ErrorActionPreference = "Stop"
+# Deliberately NOT $ErrorActionPreference = "Stop" at script scope: with
+# that set, PowerShell promotes ANY stderr line from an external command
+# (docker included) into a terminating error, even when that stream is
+# redirected to $null - so a plain "Docker Desktop isn't running" message
+# on stderr would abort the whole script before the $LASTEXITCODE checks
+# below ever ran, instead of hitting the friendly messages they print.
+# Native command failures are handled explicitly via $LASTEXITCODE
+# instead; the one block with real cmdlet calls (.env creation) opts into
+# -ErrorAction Stop itself, scoped to just that try/catch.
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $repoRoot
 
@@ -52,32 +60,37 @@ $envExamplePath = Join-Path $repoRoot ".env.example"
 
 if (-not (Test-Path $envPath)) {
     Write-Step "Aucun .env trouve - creation a partir de .env.example"
-    Copy-Item $envExamplePath $envPath
+    try {
+        Copy-Item $envExamplePath $envPath -ErrorAction Stop
 
-    # Generates a real Fernet key (url-safe base64 of exactly 32 random
-    # bytes) - the one .env.example value that is a placeholder string
-    # rather than a directly usable default. See the header comment above.
-    # Uses the RandomNumberGenerator.Create()/GetBytes() instance pattern
-    # rather than the static Fill() helper, since Fill() is not available
-    # on the .NET Framework runtime that Windows PowerShell 5.1 (the
-    # default on a stock Windows 10/11 install) ships with.
-    $keyBytes = New-Object byte[] 32
-    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-    $rng.GetBytes($keyBytes)
-    $fernetKey = [Convert]::ToBase64String($keyBytes).Replace('+', '-').Replace('/', '_')
+        # Generates a real Fernet key (url-safe base64 of exactly 32 random
+        # bytes) - the one .env.example value that is a placeholder string
+        # rather than a directly usable default. See the header comment above.
+        # Uses the RandomNumberGenerator.Create()/GetBytes() instance pattern
+        # rather than the static Fill() helper, since Fill() is not available
+        # on the .NET Framework runtime that Windows PowerShell 5.1 (the
+        # default on a stock Windows 10/11 install) ships with.
+        $keyBytes = New-Object byte[] 32
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($keyBytes)
+        $fernetKey = [Convert]::ToBase64String($keyBytes).Replace('+', '-').Replace('/', '_')
 
-    (Get-Content $envPath) |
-        ForEach-Object {
-            if ($_ -match '^MFA_ENCRYPTION_KEY=') {
-                "MFA_ENCRYPTION_KEY=$fernetKey"
-            } else {
-                $_
-            }
-        } | Set-Content $envPath -Encoding UTF8
+        (Get-Content $envPath -ErrorAction Stop) |
+            ForEach-Object {
+                if ($_ -match '^MFA_ENCRYPTION_KEY=') {
+                    "MFA_ENCRYPTION_KEY=$fernetKey"
+                } else {
+                    $_
+                }
+            } | Set-Content $envPath -Encoding UTF8 -ErrorAction Stop
 
-    Write-Ok "Fichier .env cree avec une cle MFA_ENCRYPTION_KEY generee."
-    Write-Warn "Les mots de passe par defaut de .env.example restent en place - usage local jetable uniquement."
-    Write-Warn "Pour tout ce qui depasse un essai jetable, editez .env et changez chaque mot de passe/secret."
+        Write-Ok "Fichier .env cree avec une cle MFA_ENCRYPTION_KEY generee."
+        Write-Warn "Les mots de passe par defaut de .env.example restent en place - usage local jetable uniquement."
+        Write-Warn "Pour tout ce qui depasse un essai jetable, editez .env et changez chaque mot de passe/secret."
+    } catch {
+        Write-Fail "echec de la creation de .env : $($_.Exception.Message)"
+        exit 1
+    }
 } else {
     Write-Step ".env existant detecte - conserve tel quel"
 }

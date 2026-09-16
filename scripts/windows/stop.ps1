@@ -12,7 +12,9 @@ param(
     [switch]$RemoveData
 )
 
-$ErrorActionPreference = "Stop"
+# Deliberately not $ErrorActionPreference = "Stop" - see start.ps1's own
+# comment on this: it would promote any stderr line from `docker` itself
+# into a script-aborting exception, bypassing the $LASTEXITCODE check below.
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $repoRoot
 
