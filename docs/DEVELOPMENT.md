@@ -38,6 +38,34 @@ Tear down (add `-v` to also drop the named volumes / all data):
 docker compose down
 ```
 
+### Windows
+
+Everything above is Linux-first (bash scripts, RLS-heavy Postgres, `/app/...`
+paths inside containers), so run it through **Docker Desktop with the WSL2
+backend** rather than native `cmd.exe`/PowerShell tooling:
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   and enable the WSL2 engine (default on a recent install); install a WSL2
+   distribution (`wsl --install`) if you don't have one.
+2. Clone the repo **inside the WSL2 filesystem** (e.g. `~/LUNATIC92I`, not
+   `/mnt/c/...`) — bind-mount performance and line-ending/permission
+   surprises are both meaningfully worse across the Windows/Linux boundary.
+3. From a WSL2 shell: the exact commands above (`cp .env.example .env`,
+   `docker compose up -d --build`) work unchanged.
+
+For a one-click launch from Windows itself (no WSL2 shell needed once Docker
+Desktop is installed), double-click **`scripts\windows\start.bat`**. It is
+the Windows equivalent of the two commands above: it checks Docker Desktop
+is running, creates `.env` from `.env.example` on first run (generating a
+real Fernet key for `MFA_ENCRYPTION_KEY` — the one default that is a
+placeholder string rather than something directly usable — and leaving
+every other value as shipped, which is fine for a throwaway local run per
+that file's own comments), runs `docker compose up -d --build`, waits for
+`/health`, and opens the frontend in your default browser. It never
+overwrites an existing `.env`. Stop the stack with
+**`scripts\windows\stop.bat`** (`stop.bat -RemoveData` to also drop the
+named volumes, mirroring `docker compose down -v`).
+
 ## Backend development (outside Docker)
 
 ```bash

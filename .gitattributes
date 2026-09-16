@@ -1,0 +1,6 @@
+# Windows launcher scripts (scripts/windows/) must keep CRLF line endings
+# regardless of the cloning platform's core.autocrlf setting — cmd.exe and
+# PowerShell both expect it, and a Linux/macOS clone normalizing them to LF
+# would silently break double-click execution on Windows.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
