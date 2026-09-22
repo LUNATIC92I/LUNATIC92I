@@ -1,0 +1,453 @@
+/* ============================================
+   WebKids Academy - Responsive Design
+   Adaptations pour tablette et mobile
+   ============================================ */
+
+/* Tablette : 768px à 1024px */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  footer .container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Tablette petite et grand mobile : 768px à 991px */
+@media (max-width: 991px) {
+  header .container {
+    height: auto;
+    padding: var(--spacing-sm) 0;
+  }
+
+  nav {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-base);
+    background-color: var(--white);
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-md);
+  }
+
+  nav.active {
+    max-height: 500px;
+  }
+
+  nav a {
+    width: 100%;
+    padding: var(--spacing-md);
+  }
+
+  .btn-menu {
+    display: block;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .hero p {
+    font-size: var(--font-size-base);
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  footer .container {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  footer a {
+    display: inline;
+    margin: 0 var(--spacing-sm);
+  }
+}
+
+/* Mobile : 480px à 767px */
+@media (max-width: 767px) {
+  :root {
+    --font-size-4xl: 1.75rem;
+    --font-size-3xl: 1.5rem;
+    --font-size-2xl: 1.25rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+  }
+
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+  h2 {
+    font-size: var(--font-size-2xl);
+  }
+
+  section {
+    padding: var(--spacing-lg) 0;
+  }
+
+  /* Header */
+  header .container {
+    height: auto;
+    padding: var(--spacing-md) 0;
+  }
+
+  .logo {
+    font-size: var(--font-size-lg);
+  }
+
+  nav {
+    flex-direction: column;
+    position: fixed;
+    top: 65px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--white);
+    max-height: 0;
+    overflow-y: auto;
+    z-index: 99;
+    padding: var(--spacing-md);
+    gap: 0;
+  }
+
+  nav.active {
+    max-height: calc(100vh - 65px);
+  }
+
+  nav a {
+    padding: var(--spacing-lg) var(--spacing-md);
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .btn-menu {
+    display: block;
+  }
+
+  /* Hero */
+  .hero {
+    padding: var(--spacing-lg) 0;
+  }
+
+  .hero h1 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .hero p {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .hero-buttons .btn {
+    width: 100%;
+  }
+
+  /* Cartes */
+  .card {
+    padding: var(--spacing-md);
+  }
+
+  .card-header {
+    font-size: var(--font-size-base);
+  }
+
+  /* Grilles */
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tabs */
+  .tabs {
+    gap: 0;
+    overflow-x: auto;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .tab-btn {
+    padding: var(--spacing-md) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Code block */
+  .code-block {
+    padding: var(--spacing-md);
+    font-size: var(--font-size-xs);
+  }
+
+  .code-block-header {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+  }
+
+  .btn-copy {
+    width: 100%;
+  }
+
+  /* Boutons */
+  .btn {
+    padding: 0.65rem 1.25rem;
+    font-size: var(--font-size-sm);
+  }
+
+  .btn-large {
+    padding: 0.8rem 1.5rem;
+    font-size: var(--font-size-base);
+  }
+
+  /* Footer */
+  footer {
+    padding: var(--spacing-lg) 0;
+  }
+
+  footer .container {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--spacing-md);
+  }
+
+  footer a {
+    display: block;
+    margin: var(--spacing-xs) 0;
+  }
+
+  .footer-bottom {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Très petit mobile : moins de 480px */
+@media (max-width: 479px) {
+  :root {
+    --spacing-md: 1rem;
+    --spacing-lg: 1.25rem;
+    --font-size-4xl: 1.5rem;
+    --font-size-3xl: 1.25rem;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  p {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  /* Header */
+  header .container {
+    height: 60px;
+  }
+
+  .logo {
+    font-size: var(--font-size-base);
+  }
+
+  /* Cartes */
+  .card {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  /* Grilles */
+  .grid {
+    gap: var(--spacing-sm);
+  }
+
+  /* Boutons */
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
+  }
+
+  .hero-buttons {
+    gap: var(--spacing-sm);
+  }
+
+  /* Code block */
+  .code-block {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    font-size: 0.75rem;
+  }
+
+  .btn-copy {
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* Badge */
+  .badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.65rem;
+  }
+}
+
+/* Affichage du menu hamburger */
+@media (max-width: 991px) {
+  header {
+    position: relative;
+  }
+
+  .menu-hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+  }
+
+  .menu-hamburger span {
+    width: 25px;
+    height: 3px;
+    background-color: var(--primary-blue);
+    transition: all var(--transition-fast);
+  }
+
+  .menu-hamburger.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+  }
+
+  .menu-hamburger.active span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .menu-hamburger.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(8px, -8px);
+  }
+}
+
+/* Orientation paysage mobile */
+@media (max-height: 500px) and (max-width: 767px) {
+  nav.active {
+    max-height: calc(100vh - 60px);
+  }
+
+  section {
+    padding: var(--spacing-md) 0;
+  }
+
+  .hero {
+    padding: var(--spacing-md) 0;
+  }
+
+  .hero h1 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .card {
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+/* Print */
+@media print {
+  header,
+  footer,
+  .btn-menu,
+  .btn-copy,
+  nav {
+    display: none;
+  }
+
+  body {
+    background-color: var(--white);
+    color: var(--gray-900);
+  }
+
+  .card,
+  .code-block {
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: var(--primary-blue);
+  }
+}
+
+/* Amélioration pour les appareils tactiles */
+@media (hover: none) and (pointer: coarse) {
+  .card {
+    transition: box-shadow var(--transition-base);
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .tab-btn {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+}
+
+/* Accessibilité - Préférence motion réduite */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Contraste élevé */
+@media (prefers-contrast: more) {
+  :root {
+    --shadow-md: 0 4px 8px 0 rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 20px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .card {
+    border: 1px solid var(--gray-300);
+  }
+
+  .btn-outline {
+    border-width: 3px;
+  }
+}

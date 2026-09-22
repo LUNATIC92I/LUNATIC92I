@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma Progression - WebKids Academy</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+
+    .progress-section {
+      background-color: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .progress-container {
+      margin-bottom: 2rem;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .badge-item {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      background-color: var(--white);
+      box-shadow: var(--shadow-md);
+      transition: all var(--transition-base);
+      border: 2px solid #22C55E;
+    }
+
+    .badge-item.locked {
+      opacity: 0.5;
+      background-color: var(--gray-100);
+      border-color: var(--gray-300);
+    }
+
+    .badge-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .badge-name {
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 0.25rem;
+    }
+
+    .badge-description {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    .locked .badge-icon {
+      filter: grayscale(1) opacity(0.5);
+    }
+
+    .achievement-timeline {
+      position: relative;
+      padding: 2rem 0;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 50px 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+
+    .timeline-dot {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: var(--primary-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .timeline-content h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    .level-indicator {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+      font-weight: 600;
+      background-color: var(--gray-200);
+      margin-top: 0.5rem;
+    }
+
+    .chart-container {
+      background-color: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 2rem;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .comparison-card {
+      background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      border-left: 4px solid var(--primary-blue);
+    }
+
+    .comparison-card h4 {
+      color: var(--primary-blue);
+      margin-top: 0;
+    }
+
+    @media (max-width: 768px) {
+      .timeline-item {
+        grid-template-columns: 40px 1fr;
+        gap: 1rem;
+      }
+
+      .timeline-dot {
+        width: 40px;
+        height: 40px;
+        font-size: 0.875rem;
+      }
+
+      .badge-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+        <a href="progression.html" class="active">Ma progression</a>
+        <a href="about.html">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Section principale -->
+  <section style="background-color: var(--gray-100); padding: 2rem 0;">
+    <div class="container">
+      <h1>📊 Ma Progression</h1>
+      <p style="color: var(--gray-600);">Voici ton parcours d'apprentissage et tes réalisations!</p>
+    </div>
+  </section>
+
+  <!-- Statistiques générales -->
+  <section>
+    <div class="container">
+      <div class="stats-summary" id="stats-summary"></div>
+    </div>
+  </section>
+
+  <!-- Progression détaillée -->
+  <section class="alt">
+    <div class="container">
+      <div class="progress-section">
+        <h2>📈 Progression générale</h2>
+
+        <!-- HTML -->
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>📄 HTML5</span>
+            <span id="html-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="html-fill" style="width: 0%;"></div>
+          </div>
+          <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;" id="html-detail"></p>
+        </div>
+
+        <!-- CSS -->
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>🎨 CSS3</span>
+            <span id="css-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="css-fill" style="width: 0%;"></div>
+          </div>
+          <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;" id="css-detail"></p>
+        </div>
+
+        <!-- Exercices -->
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>✍️ Exercices</span>
+            <span id="exercises-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="exercises-fill" style="width: 0%;"></div>
+          </div>
+          <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;" id="exercises-detail"></p>
+        </div>
+
+        <!-- Global -->
+        <div class="progress-container" style="background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%); padding: 1.5rem; border-radius: var(--radius-lg); margin-top: 2rem; color: white;">
+          <div class="progress-label" style="color: white;">
+            <span>🎯 Progression globale</span>
+            <span id="global-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="global-fill" style="width: 0%; background-color: rgba(255,255,255,0.6);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Badges -->
+  <section id="badges">
+    <div class="container">
+      <h2>🏅 Tes Badges</h2>
+      <div id="badges-container"></div>
+    </div>
+  </section>
+
+  <!-- Statistiques détaillées -->
+  <section class="alt">
+    <div class="container">
+      <h2>📊 Statistiques détaillées</h2>
+
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <h4>📚 Cours HTML</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-blue);">
+            <span id="html-courses">0</span>/<span id="html-total">10</span>
+          </div>
+          <p style="margin: 0.5rem 0 0 0;">Cours terminés</p>
+          <a href="cours.html?subject=html" style="font-size: 0.875rem; color: var(--primary-blue); font-weight: 600;">Continuer →</a>
+        </div>
+
+        <div class="comparison-card">
+          <h4>🎨 Cours CSS</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-blue);">
+            <span id="css-courses">0</span>/<span id="css-total">10</span>
+          </div>
+          <p style="margin: 0.5rem 0 0 0;">Cours terminés</p>
+          <a href="cours.html?subject=css" style="font-size: 0.875rem; color: var(--primary-blue); font-weight: 600;">Continuer →</a>
+        </div>
+
+        <div class="comparison-card">
+          <h4>✍️ Exercices</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-blue);">
+            <span id="completed-exercises">0</span>/<span id="total-exercises">50</span>
+          </div>
+          <p style="margin: 0.5rem 0 0 0;">Exercices complétés</p>
+          <a href="exercices.html" style="font-size: 0.875rem; color: var(--primary-blue); font-weight: 600;">Tous les exercices →</a>
+        </div>
+
+        <div class="comparison-card">
+          <h4>🏆 Badges</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-blue);">
+            <span id="unlocked-badges">0</span>/<span id="total-badges">6</span>
+          </div>
+          <p style="margin: 0.5rem 0 0 0;">Badges débloqués</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section>
+    <div class="container">
+      <h2>🎯 Tes Réalisations</h2>
+      <div class="achievement-timeline" id="achievements"></div>
+    </div>
+  </section>
+
+  <!-- Conseils -->
+  <section class="alt">
+    <div class="container">
+      <h2>💡 Nos Conseils</h2>
+
+      <div class="grid grid-2" style="margin-top: 2rem;">
+        <div class="card">
+          <h3>Apprendre régulièrement</h3>
+          <p>Consacre au moins 20 minutes par jour à l'apprentissage. C'est plus efficace que des sessions longues et espacées.</p>
+        </div>
+
+        <div class="card">
+          <h3>Pratiquer c'est créer</h3>
+          <p>N'hésite pas à expérimenter! Crée tes propres projets en utilisant ce que tu apprends. C'est comme ça qu'on progresse.</p>
+        </div>
+
+        <div class="card">
+          <h3>Demander de l'aide</h3>
+          <p>Si tu as un problème, n'hésite pas à regarder les solutions proposées ou à chercher sur Internet. C'est normal de demander!</p>
+        </div>
+
+        <div class="card">
+          <h3>Partager tes créations</h3>
+          <p>Montre tes projets à tes amis et à ta famille! Les retours te permettront de t'améliorer et de rester motivé.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Actions -->
+  <section>
+    <div class="container" style="text-align: center;">
+      <h2>À faire ensuite?</h2>
+      <p>Voici tes prochaines étapes recommandées:</p>
+
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem;">
+        <a href="cours.html?subject=html" class="btn btn-primary">Continuer HTML5</a>
+        <a href="cours.html?subject=css" class="btn btn-primary">Apprendre CSS3</a>
+        <a href="exercices.html" class="btn btn-secondary">Faire des exercices</a>
+        <a href="challenges.html" class="btn btn-secondary">Relever des challenges</a>
+      </div>
+
+      <button onclick="resetProgress()" style="margin-top: 2rem; padding: 0.5rem 1rem; background: #EF4444; color: white; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.875rem;">Réinitialiser ma progression</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="#badges">Mes badges</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html">À propos</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/courses.js"></script>
+  <script src="js/exercises.js"></script>
+  <script src="js/progress.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Mettre à jour les statistiques
+      updateStats();
+      renderProgressSummary('stats-summary');
+      renderProgress('');
+      renderBadges('badges-container');
+      renderAchievements();
+    });
+
+    function updateStats() {
+      const htmlPercent = getCompletionPercentage('html');
+      const cssPercent = getCompletionPercentage('css');
+      const exercisesPercent = getExercisesCompletionPercentage();
+      const globalPercent = Math.round((htmlPercent + cssPercent + exercisesPercent) / 3);
+
+      // Mettre à jour les pourcentages
+      document.getElementById('html-percent').textContent = htmlPercent + '%';
+      document.getElementById('css-percent').textContent = cssPercent + '%';
+      document.getElementById('exercises-percent').textContent = exercisesPercent + '%';
+      document.getElementById('global-percent').textContent = globalPercent + '%';
+
+      // Mettre à jour les barres
+      document.getElementById('html-fill').style.width = htmlPercent + '%';
+      document.getElementById('css-fill').style.width = cssPercent + '%';
+      document.getElementById('exercises-fill').style.width = exercisesPercent + '%';
+      document.getElementById('global-fill').style.width = globalPercent + '%';
+
+      // Détails
+      const htmlCourses = getCoursesBySubject('html').filter(c =>
+        localStorage.getItem(`course-html-${c.id}`) === 'true'
+      ).length;
+      const cssCourses = getCoursesBySubject('css').filter(c =>
+        localStorage.getItem(`course-css-${c.id}`) === 'true'
+      ).length;
+      const totalExercises = window.exercises ? window.exercises.length : 0;
+      const completedExercises = totalExercises ? Math.round(totalExercises * exercisesPercent / 100) : 0;
+
+      document.getElementById('html-detail').textContent = htmlCourses + '/10 cours HTML complétés';
+      document.getElementById('css-detail').textContent = cssCourses + '/10 cours CSS complétés';
+      document.getElementById('exercises-detail').textContent = completedExercises + '/' + totalExercises + ' exercices complétés';
+
+      document.getElementById('html-courses').textContent = htmlCourses;
+      document.getElementById('css-courses').textContent = cssCourses;
+      document.getElementById('completed-exercises').textContent = completedExercises;
+      document.getElementById('total-exercises').textContent = totalExercises;
+
+      document.getElementById('html-total').textContent = getCoursesBySubject('html').length;
+      document.getElementById('css-total').textContent = getCoursesBySubject('css').length;
+
+      const badges = getUnlockedBadges();
+      document.getElementById('unlocked-badges').textContent = badges.length;
+      document.getElementById('total-badges').textContent = 6;
+    }
+
+    function renderProgressSummary(containerId) {
+      if (!containerId) return;
+
+      const htmlPercent = getCompletionPercentage('html');
+      const cssPercent = getCompletionPercentage('css');
+      const exercisesPercent = getExercisesCompletionPercentage();
+      const globalPercent = Math.round((htmlPercent + cssPercent + exercisesPercent) / 3);
+      const badges = getUnlockedBadges();
+
+      let html = `
+        <div class="stat-box">
+          <div class="stat-number">${globalPercent}%</div>
+          <div class="stat-label">Progression globale</div>
+        </div>
+
+        <div class="stat-box" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
+          <div class="stat-number">${htmlPercent}%</div>
+          <div class="stat-label">HTML5</div>
+        </div>
+
+        <div class="stat-box" style="background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);">
+          <div class="stat-number">${cssPercent}%</div>
+          <div class="stat-label">CSS3</div>
+        </div>
+
+        <div class="stat-box" style="background: linear-gradient(135deg, #9333EA 0%, #7E22CE 100%);">
+          <div class="stat-number">${badges.length}</div>
+          <div class="stat-label">Badges débloqués</div>
+        </div>
+      `;
+
+      document.getElementById(containerId).innerHTML = html;
+    }
+
+    function renderProgress(containerId) {
+      // Utilisé dans la version avec conteneur, ici c'est fait directement
+    }
+
+    function renderAchievements() {
+      const achievements = [
+        {
+          title: 'Premiers pas',
+          description: 'Tu as commencé ton apprentissage du Web',
+          date: 'Jour 1',
+          icon: '🚀'
+        },
+        {
+          title: 'Premier cours complété',
+          description: 'Tu as terminé un cours!',
+          date: 'Cours 1',
+          icon: '📚'
+        },
+        {
+          title: 'Premier exercice',
+          description: 'Tu as complété ton premier exercice',
+          date: 'Exercice 1',
+          icon: '✍️'
+        },
+        {
+          title: 'Tous les cours HTML',
+          description: 'Tu as complété tous les cours HTML5!',
+          date: 'Quand tu finiras',
+          icon: '📄',
+          condition: getCompletionPercentage('html') === 100
+        }
+      ];
+
+      let html = '';
+      achievements.forEach((achievement, idx) => {
+        const completed = achievement.condition !== false;
+        html += `
+          <div class="timeline-item">
+            <div class="timeline-dot" style="${!completed ? 'opacity: 0.5; background-color: #ccc;' : ''}">${achievement.icon}</div>
+            <div class="timeline-content">
+              <h3 style="margin: 0 0 0.25rem 0;">${achievement.title}</h3>
+              <p style="color: #666; margin: 0;">${achievement.description}</p>
+              <div class="level-indicator" style="${!completed ? 'background-color: #E5E7EB; color: #999;' : ''}">${achievement.date}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      document.getElementById('achievements').innerHTML = html;
+    }
+  </script>
+</body>
+</html>

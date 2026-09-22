@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Challenges - WebKids Academy</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    .challenge-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .challenge-card::before {
+      content: attr(data-difficulty);
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--primary-blue);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .challenge-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .challenge-requirements {
+      background-color: var(--gray-100);
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      margin: 1rem 0;
+      border-left: 4px solid var(--primary-blue);
+    }
+
+    .skills-used {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .skill-tag {
+      background-color: var(--gray-200);
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius-xl);
+      font-size: 0.875rem;
+      color: var(--gray-900);
+    }
+
+    .bonus-section {
+      background-color: #FEF08A;
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      border-left: 4px solid #FBBF24;
+      margin-top: 1rem;
+    }
+
+    .difficulty-badge {
+      display: inline-block;
+      font-weight: 600;
+    }
+
+    .difficulty-1 { color: #22C55E; }
+    .difficulty-2 { color: #F97316; }
+    .difficulty-3 { color: #EF4444; }
+
+    .featured-challenge {
+      background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%);
+      color: white;
+      padding: 3rem 2rem;
+      border-radius: var(--radius-xl);
+      margin-bottom: 3rem;
+      text-align: center;
+    }
+
+    .featured-challenge h2 {
+      color: white;
+      margin-bottom: 1rem;
+    }
+
+    .featured-challenge p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+
+    .featured-challenge .btn {
+      background-color: white;
+      color: var(--primary-blue);
+    }
+
+    .featured-challenge .btn:hover {
+      background-color: var(--gray-100);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html" class="active">Challenges</a>
+        <a href="progression.html">Ma progression</a>
+        <a href="about.html">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Section principale -->
+  <section style="background-color: var(--gray-100); padding: 2rem 0;">
+    <div class="container">
+      <h1>🏆 Challenges</h1>
+      <p style="color: var(--gray-600);">Relève les défis et deviens un expert du Web!</p>
+    </div>
+  </section>
+
+  <!-- Challenge en vedette -->
+  <section>
+    <div class="container">
+      <div class="featured-challenge">
+        <h2>🚀 Challenge du Mois</h2>
+        <p>Crée un portfolio Web professionnel avec HTML et CSS!</p>
+        <a href="#" class="btn btn-primary btn-large" onclick="alert('Challenge: Crée un portfolio complet avec page d\'accueil, projets, à propos et contact'); return false;">Relever le défi</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Challenges -->
+  <section>
+    <div class="container">
+      <h2 style="margin-bottom: 2rem;">Nos Challenges</h2>
+
+      <div class="grid grid-2">
+        <!-- Challenge 1 -->
+        <div class="card challenge-card" data-difficulty="Facile">
+          <div class="challenge-number">01</div>
+          <h3>Créer une carte de profil</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une belle carte affichant un profil avec photo, nom, et description.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-1">Débutant</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML</span>
+            <span class="skill-tag">CSS Box Model</span>
+            <span class="skill-tag">Images</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Ajoute une animation au survol de la carte!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 01: Crée une carte de profil avec HTML et CSS\n\nConsignes:\n- Ajoute une image de profil\n- Affiche le nom et la description\n- Style la carte avec CSS\n- Ajoute des bordures arrondies\n- Ajoute une ombre\n\nBonus: Ajoute une animation au survol!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 2 -->
+        <div class="card challenge-card" data-difficulty="Facile">
+          <div class="challenge-number">02</div>
+          <h3>Créer une page "À propos"</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une page avec ta photo, ton histoire, et tes compétences.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-1">Débutant</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Sémantique</span>
+            <span class="skill-tag">Listes</span>
+            <span class="skill-tag">CSS Typographie</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Crée un lien vers la page d'accueil!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 02: Crée une page À propos\n\nConsignes:\n- Ajoute un titre accrocheur\n- Raconte ton histoire\n- Liste tes compétences\n- Ajoute une photo\n- Style avec CSS\n\nBonus: Ajoute des liens vers tes projets!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 3 -->
+        <div class="card challenge-card" data-difficulty="Facile">
+          <div class="challenge-number">03</div>
+          <h3>Créer une galerie d'images</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une galerie d'images avec CSS Grid ou Flexbox.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-2">Intermédiaire</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">CSS Grid</span>
+            <span class="skill-tag">CSS Flexbox</span>
+            <span class="skill-tag">Responsive Design</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Rend-la responsive (adapte-toi à mobile)!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 03: Crée une galerie d\'images\n\nConsignes:\n- Utilise CSS Grid (3 colonnes)\n- Ajoute 9 images\n- Style les images\n- Ajoute un hover effect\n\nBonus: Rends-la responsive avec media queries!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 4 -->
+        <div class="card challenge-card" data-difficulty="Moyen">
+          <div class="challenge-number">04</div>
+          <h3>Créer une navigation</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une barre de navigation stylisée et fonctionnelle.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-2">Intermédiaire</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Listes</span>
+            <span class="skill-tag">Flexbox</span>
+            <span class="skill-tag">Transitions CSS</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Ajoute une animation au survol des liens!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 04: Crée une navigation\n\nConsignes:\n- Crée une liste de liens\n- Utilise Flexbox pour l\'alignement\n- Style les liens\n- Ajoute du hover\n- Rends-la sticky (reste au top en scrolling)\n\nBonus: Ajoute une animation smooth!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 5 -->
+        <div class="card challenge-card" data-difficulty="Moyen">
+          <div class="challenge-number">05</div>
+          <h3>Créer une carte produit</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une belle carte de produit avec prix et bouton d'achat.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-2">Intermédiaire</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Structure</span>
+            <span class="skill-tag">CSS Styling</span>
+            <span class="skill-tag">Boutons</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Crée une grille de 4 produits!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 05: Crée une carte produit\n\nConsignes:\n- Image du produit\n- Nom et description\n- Prix\n- Bouton d\'achat\n- Style professionnel\n\nBonus: Crée une grille de 4 produits!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 6 -->
+        <div class="card challenge-card" data-difficulty="Moyen">
+          <div class="challenge-number">06</div>
+          <h3>Créer un site de restaurant</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée un site complet pour un restaurant avec menu et réservation.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-2">Intermédiaire</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Complet</span>
+            <span class="skill-tag">CSS Layout</span>
+            <span class="skill-tag">Formulaires</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Rends-le responsive pour mobile!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 06: Crée un site de restaurant\n\nConsignes:\n- En-tête avec logo\n- Menu avec catégories\n- Photos des plats\n- Formulaire de réservation\n- Informations de contact\n- Footer\n\nBonus: Responsive design!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 7 -->
+        <div class="card challenge-card" data-difficulty="Difficile">
+          <div class="challenge-number">07</div>
+          <h3>Créer une landing page</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée une landing page impressionnante avec animations.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-3">Avancé</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Avancé</span>
+            <span class="skill-tag">CSS Animations</span>
+            <span class="skill-tag">Responsive</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Ajoute des animations de scroll!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 07: Crée une landing page\n\nConsignes:\n- Hero section accrocheur\n- Section \"Avantages\"\n- Galerie\n- Formulaire de contact\n- Animations CSS\n- Responsive design\n\nBonus: Scroll animations smooth!')">Commencer</button>
+        </div>
+
+        <!-- Challenge 8 -->
+        <div class="card challenge-card" data-difficulty="Difficile">
+          <div class="challenge-number">08</div>
+          <h3>Créer un portfolio</h3>
+          <div class="challenge-requirements">
+            <strong>Objectif:</strong> Crée un portfolio impressionnant pour présenter tes projets.
+          </div>
+          <p><strong>Difficulté:</strong> <span class="difficulty-badge difficulty-3">Avancé</span></p>
+          <div class="skills-used">
+            <span class="skill-tag">HTML Sémantique</span>
+            <span class="skill-tag">CSS Grid</span>
+            <span class="skill-tag">Responsive</span>
+          </div>
+          <div class="bonus-section">
+            <strong>Bonus:</strong> Ajoute des filtres de projets!
+          </div>
+          <button class="btn btn-primary" style="margin-top: 1rem; width: 100%;" onclick="alert('Challenge 08: Crée un portfolio\n\nConsignes:\n- Page d\'accueil\n- Section À propos\n- Galerie de projets\n- Détails des projets\n- Contact\n- Design professionnel\n- Responsive\n\nBonus: Filtres dynamiques!')">Commencer</button>
+        </div>
+
+        <!-- Challenge Final -->
+        <div class="card challenge-card" style="grid-column: 1/-1; background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%); color: white;" data-difficulty="Expert">
+          <div class="challenge-number" style="color: white;">🏆</div>
+          <h3 style="color: white;">Challenge Final - Crée ton propre site Web!</h3>
+          <div style="background-color: rgba(255,255,255,0.1); padding: 1rem; border-radius: var(--radius-md); margin: 1rem 0; border-left: 4px solid white;">
+            <strong style="color: white;">Objectif:</strong> <span style="color: #E0E7FF;">Crée un site Web complet de ton choix - un blog, un magazine, un portfolio, une boutique, ou ce que tu veux!</span>
+          </div>
+          <p style="color: #E0E7FF;"><strong>Difficulté:</strong> <span style="background-color: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: var(--radius-md); font-weight: 600;">Expert</span></p>
+          <div class="skills-used">
+            <span class="skill-tag" style="background-color: rgba(255,255,255,0.2); color: white;">Tout ce que tu as appris!</span>
+          </div>
+          <div style="background-color: rgba(255,215,0,0.2); padding: 1rem; border-radius: var(--radius-md); border-left: 4px solid #FFD700; margin-top: 1rem; color: white;">
+            <strong>🌟 Grand Défi:</strong> Publie ton site en ligne (avec GitHub Pages ou un autre service gratuit) et partage-le avec le monde!
+          </div>
+          <button class="btn" style="margin-top: 1rem; width: 100%; background-color: white; color: var(--primary-blue); font-weight: 600;" onclick="alert('Challenge Final: Crée ton propre site Web!\n\nLibre à toi de créer ce que tu veux:\n- Blog personnel\n- Magazine\n- Portfolio\n- Boutique en ligne\n- Site communautaire\n- Jeu Web\n- Ou n\'importe quoi d\'autre!\n\nConsignes:\n- Utilise HTML et CSS\n- Rends-le responsive\n- Ajoute des animations\n- Réfléchis au design\n- Écris du code propre\n\n🌟 Grand Défi: Publie-le en ligne!')">Lancer le challenge final</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section CTA -->
+  <section class="alt">
+    <div class="container" style="text-align: center;">
+      <h2>Prêt à relever un challenge?</h2>
+      <p>Choisis un challenge et commence maintenant!</p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem;">
+        <a href="cours.html?subject=html" class="btn btn-primary">Rafraîchis tes cours HTML</a>
+        <a href="cours.html?subject=css" class="btn btn-secondary">Rafraîchis tes cours CSS</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="progression.html#badges">Mes badges</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html">À propos</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/progress.js"></script>
+</body>
+</html>

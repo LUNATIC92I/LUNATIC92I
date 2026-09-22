@@ -1,0 +1,512 @@
+/* ============================================
+   WebKids Academy - Animations
+   Animations CSS modernes et fluides
+   ============================================ */
+
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+}
+
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animations générales */
+body {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+section {
+  animation: slideInUp 0.6s ease-in-out both;
+}
+
+section:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+section:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+section:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+/* Hero animations */
+.hero h1 {
+  animation: slideInDown 0.7s ease-in-out;
+}
+
+.hero p {
+  animation: slideInUp 0.7s ease-in-out 0.2s both;
+}
+
+.hero-buttons {
+  animation: slideInUp 0.7s ease-in-out 0.4s both;
+}
+
+/* Cartes */
+.card {
+  animation: slideInUp 0.6s ease-in-out both;
+  transition: all var(--transition-base);
+}
+
+.grid .card:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.grid .card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.grid .card:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.grid .card:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.grid .card:nth-child(n+5) {
+  animation-delay: calc((var(--index, 0) - 4) * 0.1s);
+}
+
+/* Effets au survol */
+.card:hover {
+  animation: floatUp 0.5s ease-in-out;
+}
+
+.btn:hover {
+  animation: none;
+}
+
+.btn-primary:hover {
+  animation: glow 1s ease-in-out infinite;
+}
+
+/* Logo animation */
+.logo:hover {
+  animation: pulse 0.5s ease-in-out;
+}
+
+/* Badges */
+.badge {
+  animation: scaleIn 0.4s ease-in-out;
+}
+
+/* Progress bar animation */
+.progress-fill {
+  animation: slideInLeft 1s ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+/* Code block animations */
+.code-block {
+  animation: slideInLeft 0.6s ease-in-out;
+  position: relative;
+}
+
+.code-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: shimmer 2s infinite;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.code-block:hover::before {
+  animation: shimmer 1s ease-in-out;
+  opacity: 1;
+}
+
+/* Boutons copy animation */
+.btn-copy {
+  transition: all var(--transition-fast);
+}
+
+.btn-copy:active {
+  animation: scaleIn 0.3s ease-in-out;
+}
+
+.btn-copy.copied {
+  animation: bounce 0.5s ease-in-out;
+}
+
+/* Tab animations */
+.tab-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-btn::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--primary-blue);
+  transition: width var(--transition-base);
+}
+
+.tab-btn:hover::after {
+  width: 100%;
+}
+
+.tab-content.active {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Loader animation */
+.loader {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(59, 130, 246, 0.3);
+  border-top: 3px solid var(--primary-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Checkmark animation */
+.checkmark {
+  width: 60px;
+  height: 60px;
+  animation: scaleIn 0.5s ease-in-out;
+}
+
+.checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: checkmark 0.6s ease-in-out 0.2s forwards;
+}
+
+.checkmark-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkmark 0.6s ease-in-out 0.5s forwards;
+}
+
+/* Transition de page */
+.page-transition {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Animation texte qui scintille */
+.shimmer-text {
+  background: linear-gradient(90deg,
+    currentColor 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    currentColor 40%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Animation pour les éléments avec motion */
+@supports (animation-timeline: view()) {
+  section {
+    animation: slideInUp 0.6s ease-in-out both;
+    animation-timeline: view();
+  }
+
+  .card {
+    animation: slideInUp 0.6s ease-in-out both;
+    animation-timeline: view();
+  }
+}
+
+/* Delay utilities */
+.delay-1 {
+  animation-delay: 0.1s;
+}
+
+.delay-2 {
+  animation-delay: 0.2s;
+}
+
+.delay-3 {
+  animation-delay: 0.3s;
+}
+
+.delay-4 {
+  animation-delay: 0.4s;
+}
+
+.delay-5 {
+  animation-delay: 0.5s;
+}
+
+/* Animation pour éléments avec data-animate */
+[data-animate="true"] {
+  animation: slideInUp 0.6s ease-in-out both;
+}
+
+/* Animations fluides de formulaire */
+input:focus,
+textarea:focus,
+select:focus {
+  animation: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Animation de succès */
+.success-animation {
+  animation: scaleIn 0.5s ease-in-out;
+  color: #22C55E;
+}
+
+/* Animation d'erreur */
+.error-animation {
+  animation: pulse 0.4s ease-in-out 3;
+  color: #EF4444;
+}
+
+/* Smooth scroll animation pour naviguer */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hover effects pour les liens */
+a:not(.btn):not(.tab-btn) {
+  position: relative;
+}
+
+a:not(.btn):not(.tab-btn)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: currentColor;
+  transition: width var(--transition-fast);
+}
+
+a:not(.btn):not(.tab-btn):hover::after {
+  width: 100%;
+}
+
+/* Animation de chargement de page */
+.page-loading {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Pulse pour attirer l'attention */
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.pulse-slow {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.pulse-fast {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Bounce effect */
+.bounce-animation {
+  animation: bounce 0.5s ease-in-out;
+}
+
+.bounce-slow {
+  animation: bounce 1s ease-in-out;
+}
+
+/* Fade animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.fade-in-up {
+  animation: slideInUp 0.6s ease-in-out;
+}
+
+.fade-in-down {
+  animation: slideInDown 0.6s ease-in-out;
+}
+
+.fade-in-left {
+  animation: slideInLeft 0.6s ease-in-out;
+}
+
+.fade-in-right {
+  animation: slideInRight 0.6s ease-in-out;
+}
+
+/* Gradient animation */
+.gradient-animate {
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+/* Tooltips avec animation */
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--gray-900);
+  color: var(--white);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+  animation: slideInDown 0.3s ease-in-out;
+  margin-bottom: 0.5rem;
+  z-index: 1000;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}

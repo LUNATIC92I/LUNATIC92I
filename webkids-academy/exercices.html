@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercices - WebKids Academy</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    .exercise-card.completed {
+      opacity: 0.7;
+      border-left: 4px solid #22C55E;
+    }
+
+    .difficulty-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius-xl);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .category-section {
+      margin-bottom: 3rem;
+    }
+
+    .category-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--gray-200);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .filter-section {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 2px solid var(--gray-300);
+      background-color: white;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+
+    .filter-btn:hover {
+      border-color: var(--primary-blue);
+      color: var(--primary-blue);
+    }
+
+    .filter-btn.active {
+      background-color: var(--primary-blue);
+      border-color: var(--primary-blue);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html" class="active">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+        <a href="progression.html">Ma progression</a>
+        <a href="about.html">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Section principale -->
+  <section style="background-color: var(--gray-100); padding: 2rem 0;">
+    <div class="container">
+      <h1>Exercices Interactifs</h1>
+      <p style="color: var(--gray-600);">Mets en pratique ce que tu as appris avec nos 50+ exercices!</p>
+    </div>
+  </section>
+
+  <!-- Statistiques -->
+  <section>
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="total-exercises">50+</div>
+          <div>Exercices disponibles</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
+          <div class="stat-number" id="completed-exercises">0</div>
+          <div>Exercices complétés</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);">
+          <div class="stat-number" id="completion-rate">0%</div>
+          <div>Taux de complétion</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filtres -->
+  <section>
+    <div class="container">
+      <h2>Filtrer par catégorie</h2>
+      <div class="filter-section">
+        <button class="filter-btn active" onclick="filterExercises('all')">Tous</button>
+        <button class="filter-btn" onclick="filterExercises('html-beginner')">📄 HTML Débutant</button>
+        <button class="filter-btn" onclick="filterExercises('html-intermediate')">📄 HTML Intermédiaire</button>
+        <button class="filter-btn" onclick="filterExercises('css-beginner')">🎨 CSS Débutant</button>
+        <button class="filter-btn" onclick="filterExercises('css-intermediate')">🎨 CSS Intermédiaire</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Exercices -->
+  <section>
+    <div class="container">
+      <!-- HTML Débutant -->
+      <div class="category-section">
+        <div class="category-title">
+          <span>📄</span>
+          <h2 style="margin: 0;">HTML - Débutant</h2>
+        </div>
+        <div class="grid grid-3" id="html-beginner-exercises"></div>
+      </div>
+
+      <!-- HTML Intermédiaire -->
+      <div class="category-section">
+        <div class="category-title">
+          <span>📄</span>
+          <h2 style="margin: 0;">HTML - Intermédiaire</h2>
+        </div>
+        <div class="grid grid-3" id="html-intermediate-exercises"></div>
+      </div>
+
+      <!-- CSS Débutant -->
+      <div class="category-section">
+        <div class="category-title">
+          <span>🎨</span>
+          <h2 style="margin: 0;">CSS - Débutant</h2>
+        </div>
+        <div class="grid grid-3" id="css-beginner-exercises"></div>
+      </div>
+
+      <!-- CSS Intermédiaire -->
+      <div class="category-section">
+        <div class="category-title">
+          <span>🎨</span>
+          <h2 style="margin: 0;">CSS - Intermédiaire</h2>
+        </div>
+        <div class="grid grid-3" id="css-intermediate-exercises"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section CTA -->
+  <section class="alt">
+    <div class="container" style="text-align: center;">
+      <h2>Besoin d'aide?</h2>
+      <p>Chaque exercice a des indices et des solutions. N'hésite pas à les utiliser!</p>
+      <a href="cours.html?subject=html" class="btn btn-primary">Retourner aux cours</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="progression.html#badges">Mes badges</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html">À propos</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/exercises.js"></script>
+  <script src="js/progress.js"></script>
+
+  <script>
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      displayExercises('all');
+      updateStats();
+    });
+
+    function displayExercises(filter) {
+      currentFilter = filter;
+
+      const categories = [
+        'html-beginner',
+        'html-intermediate',
+        'css-beginner',
+        'css-intermediate'
+      ];
+
+      categories.forEach(category => {
+        const container = document.getElementById(`${category}-exercises`);
+        if (!container) return;
+
+        let exercisesToShow = getExercisesByCategory(category);
+
+        if (filter !== 'all') {
+          exercisesToShow = exercisesToShow.filter(e => e.category === filter);
+        }
+
+        let html = '';
+
+        exercisesToShow.forEach(exercise => {
+          const completed = localStorage.getItem(`exercise-${exercise.id}`) === 'true';
+          const completedClass = completed ? 'completed' : '';
+
+          html += `
+            <div class="card exercise-card ${completedClass}">
+              <div class="card-header">
+                <span>${exercise.title}</span>
+                ${completed ? '<span style="color: #22C55E;">✓</span>' : ''}
+              </div>
+              <div class="card-body">
+                <p>${exercise.description}</p>
+                <div style="margin-top: 1rem;">
+                  <span data-difficulty="${exercise.difficulty}"></span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#" class="btn btn-primary btn-small" onclick="startExercise(${exercise.id}); return false;">
+                  ${completed ? 'Revoir' : 'Commencer'}
+                </a>
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html || '<p style="grid-column: 1/-1; text-align: center; color: #666;">Aucun exercice dans cette catégorie.</p>';
+
+        // Initialiser les badges de difficulté
+        document.querySelectorAll('[data-difficulty]').forEach(el => {
+          const level = el.getAttribute('data-difficulty');
+          const difficulties = {
+            'beginner': '🟢 Débutant',
+            'intermediate': '🟠 Intermédiaire',
+            'advanced': '🔴 Avancé'
+          };
+          if (difficulties[level]) {
+            el.textContent = difficulties[level];
+          }
+        });
+      });
+
+      // Mettre à jour les boutons de filtre
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[onclick="filterExercises('${filter}')"]`).classList.add('active');
+    }
+
+    function filterExercises(category) {
+      displayExercises(category);
+    }
+
+    function updateStats() {
+      const totalExercises = window.exercises ? window.exercises.length : 0;
+      const completedExercises = totalExercises ? Math.round(totalExercises * getExercisesCompletionPercentage() / 100) : 0;
+      const completionRate = getExercisesCompletionPercentage();
+
+      document.getElementById('total-exercises').textContent = totalExercises;
+      document.getElementById('completed-exercises').textContent = completedExercises;
+      document.getElementById('completion-rate').textContent = completionRate + '%';
+    }
+  </script>
+</body>
+</html>

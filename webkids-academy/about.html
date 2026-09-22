@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>À Propos - WebKids Academy</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    .mission-box {
+      background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%);
+      color: white;
+      padding: 3rem 2rem;
+      border-radius: var(--radius-xl);
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .mission-box h2 {
+      color: white;
+      margin-top: 0;
+    }
+
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .value-card {
+      text-align: center;
+      padding: 2rem;
+      background-color: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .value-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .value-card h3 {
+      margin: 1rem 0 0.5rem 0;
+    }
+
+    .timeline {
+      position: relative;
+      padding: 2rem 0;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+
+    .timeline-year {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-blue);
+    }
+
+    .timeline-content h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      background-color: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .feature-content h4 {
+      margin: 0 0 0.25rem 0;
+    }
+
+    .feature-content p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #666;
+    }
+
+    .cta-section {
+      background: linear-gradient(135deg, #3B82F6 0%, #9333EA 100%);
+      color: white;
+      padding: 3rem 2rem;
+      border-radius: var(--radius-xl);
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      color: white;
+      margin-top: 0;
+    }
+
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 2rem;
+      background-color: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--gray-600);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+        <a href="progression.html">Ma progression</a>
+        <a href="about.html" class="active">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h1>À propos de WebKids Academy</h1>
+      <p>La plateforme qui rend l'apprentissage du Web amusant et accessible à tous</p>
+    </div>
+  </section>
+
+  <!-- Mission -->
+  <section>
+    <div class="container">
+      <div class="mission-box">
+        <h2>🎯 Notre Mission</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 0;">WebKids Academy a pour mission de rendre l'apprentissage du développement Web accessible, ludique et efficace pour les enfants et adolescents de 8 à 16 ans, en les inspirant à créer et à explorer le monde digital.</p>
+      </div>
+
+      <div class="grid grid-2">
+        <div>
+          <h2>Qu'est-ce que nous faisons?</h2>
+          <p>WebKids Academy est une plateforme d'apprentissage gratuite qui enseigne les fondamentaux du développement Web - HTML5 et CSS3 - à travers des cours interactifs, des exercices pratiques, et des challenges inspirants.</p>
+          <p>Notre approche pédagogique combine l'explication théorique avec la pratique immédiate, permettant aux apprenants de voir les résultats de leur code en temps réel.</p>
+        </div>
+
+        <div>
+          <h2>Pourquoi nous l'avons créé?</h2>
+          <p>Nous croyons que chaque enfant a le potentiel de créer sur Internet. Le Web est devenu un outil essentiel au 21ème siècle, et nous voulons donner à tous les enfants les compétences pour le maîtriser.</p>
+          <p>L'apprentissage du Web dépasse les simples compétences techniques - c'est aussi apprendre à résoudre des problèmes, à exprimer sa créativité, et à contribuer à la communauté numérique mondiale.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Valeurs -->
+  <section class="alt">
+    <div class="container">
+      <h2 style="text-align: center;">Nos Valeurs</h2>
+
+      <div class="values-grid">
+        <div class="value-card">
+          <div class="value-icon">🎓</div>
+          <h3>Accessibilité</h3>
+          <p>L'éducation de qualité doit être accessible à tous, peu importe le contexte social ou financier. Nos cours sont gratuits et sans inscription obligatoire.</p>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon">🎨</div>
+          <h3>Créativité</h3>
+          <p>Nous encourageons la créativité et l'expression de soi. Le Web est un canvas infini pour les idées, et nous aidons les enfants à les concrétiser.</p>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon">🚀</div>
+          <h3>Progression</h3>
+          <p>Chaque apprenant a son propre rythme. Notre plateforme s'adapte à ta progression et te permet d'avancer à ton rythme, sans pression.</p>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon">🤝</div>
+          <h3>Communauté</h3>
+          <p>Nous créons une communauté d'apprenants où chacun peut partager ses créations, apprendre des autres, et s'entraider.</p>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon">💡</div>
+          <h3>Practicité</h3>
+          <p>Nous croyons à l'apprentissage par la pratique. Chaque concept est accompagné d'exercices interactifs et de projets concrets.</p>
+        </div>
+
+        <div class="value-card">
+          <div class="value-icon">♿</div>
+          <h3>Inclusivité</h3>
+          <p>WebKids Academy est conçue pour être accessible à tous, incluant les personnes en situation de handicap. L'accessibilité est une priorité.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Caractéristiques -->
+  <section>
+    <div class="container">
+      <h2 style="text-align: center;">Pourquoi choisir WebKids Academy?</h2>
+
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">✨</div>
+          <div class="feature-content">
+            <h4>Interface moderne</h4>
+            <p>Une plateforme belle et intuitive, conçue spécialement pour les jeunes apprenants.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">📱</div>
+          <div class="feature-content">
+            <h4>Responsive Design</h4>
+            <p>Apprends sur n'importe quel appareil - ordinateur, tablette ou smartphone.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-content">
+            <h4>Objectifs clairs</h4>
+            <p>Chaque leçon a des objectifs précis. Tu sais exactement ce que tu vas apprendre.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🏆</div>
+          <div class="feature-content">
+            <h4>Gamification</h4>
+            <p>Gagne des badges, complète des challenges, et débloquer des achievements!</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🚀</div>
+          <div class="feature-content">
+            <h4>Code en temps réel</h4>
+            <p>Vois les résultats de ton code instantanément. Apprends par l'expérience.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">💯</div>
+          <div class="feature-content">
+            <h4>100% gratuit</h4>
+            <p>Aucun coût caché, pas d'abonnement. La qualité de l'éducation pour tous!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Statistiques -->
+  <section class="alt">
+    <div class="container">
+      <h2 style="text-align: center; margin-bottom: 2rem;">Les Chiffres de WebKids Academy</h2>
+
+      <div class="stats-section">
+        <div class="stat">
+          <div class="stat-number">20+</div>
+          <div class="stat-label">Cours disponibles</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-number">50+</div>
+          <div class="stat-label">Exercices interactifs</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-number">10+</div>
+          <div class="stat-label">Challenges</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-number">6</div>
+          <div class="stat-label">Badges à débloquer</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Gratuit et libre</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">Possibilités créatives</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comment ça marche? -->
+  <section>
+    <div class="container">
+      <h2 style="text-align: center; margin-bottom: 2rem;">Comment utiliser WebKids Academy?</h2>
+
+      <div class="grid grid-2">
+        <div>
+          <div style="background-color: var(--gray-100); padding: 2rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">Étape 1: Choisir un sujet</h3>
+            <p>Commence par HTML5 ou CSS3. Ou découvre les deux! Il n'y a pas d'ordre obligatoire, mais nous recommandons HTML d'abord.</p>
+          </div>
+
+          <div style="background-color: var(--gray-100); padding: 2rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">Étape 3: Pratiquer</h3>
+            <p>Fais les exercices! Chaque exercice est conçu pour renforcer ce que tu viens d'apprendre. N'hésite pas à utiliser les indices.</p>
+          </div>
+        </div>
+
+        <div>
+          <div style="background-color: var(--gray-100); padding: 2rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">Étape 2: Suivre les cours</h3>
+            <p>Lis les explications, regarde les exemples de code, et comprends comment ça marche. Chaque concept est expliqué simplement.</p>
+          </div>
+
+          <div style="background-color: var(--gray-100); padding: 2rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">Étape 4: Créer des projets</h3>
+            <p>Relève les challenges et crée tes propres projets! C'est comme ça qu'on devient vraiment compétent en développement Web.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Qui est derrière? -->
+  <section class="alt">
+    <div class="container">
+      <h2 style="text-align: center;">Qui est derrière WebKids Academy?</h2>
+      <p style="text-align: center; max-width: 600px; margin: 1rem auto 2rem;">WebKids Academy a été créée par une équipe de développeurs passionnés par l'éducation et la technologie. Nous croyons fermement que les enfants d'aujourd'hui vont créer Internet de demain.</p>
+
+      <div class="grid grid-3">
+        <div style="text-align: center; padding: 2rem; background-color: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">👨‍💻</div>
+          <h3 style="margin-top: 0;">Expert en Web</h3>
+          <p>Notre équipe a plus de 50 ans d'expérience cumulée en développement Web.</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem; background-color: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">👨‍🏫</div>
+          <h3 style="margin-top: 0;">Passionnés d'éducation</h3>
+          <p>Nous avons enseigné à des milliers d'enfants et d'adolescents autour du monde.</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem; background-color: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">❤️</div>
+          <h3 style="margin-top: 0;">Dévous aux enfants</h3>
+          <p>Nous créons WebKids Academy avec amour, en pensant à ta future carrière en tech!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Final -->
+  <section>
+    <div class="container cta-section">
+      <h2>Prêt à commencer ton aventure?</h2>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">Rejoins des milliers d'apprenants qui créent le Web de demain!</p>
+
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="index.html" class="btn" style="background-color: white; color: var(--primary-blue); font-weight: 600;">Retour à l'accueil</a>
+        <a href="cours.html?subject=html" class="btn" style="background-color: white; color: var(--primary-blue); font-weight: 600;">Commencer à apprendre</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+        <p>Une plateforme gratuite pour apprendre le développement Web dès le plus jeune âge.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="progression.html#badges">Mes badges</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html" class="active">À propos</a>
+        <a href="#">Conditions</a>
+        <a href="#">Confidentialité</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés. Apprendre le Web, c'est créer l'avenir! 🚀</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

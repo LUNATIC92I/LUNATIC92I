@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cours - WebKids Academy</title>
+  <meta name="description" content="Nos cours sur HTML5 et CSS3">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    .lesson-container {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .lesson-content {
+      background-color: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .sidebar-card {
+      background-color: var(--white);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .courses-list {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .course-item {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-left: 4px solid transparent;
+    }
+
+    .course-item:hover {
+      background-color: var(--gray-100);
+      border-left-color: var(--primary-blue);
+    }
+
+    .course-item.active {
+      background-color: var(--primary-blue);
+      color: var(--white);
+      border-left-color: var(--primary-blue);
+    }
+
+    .lesson-section {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .lesson-section:last-child {
+      border-bottom: none;
+    }
+
+    .code-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 2rem 0;
+      align-items: start;
+    }
+
+    .preview-box {
+      background-color: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .example-output {
+      text-align: center;
+      font-size: 1.2rem;
+    }
+
+    .completion-button {
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: #22C55E;
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all var(--transition-fast);
+    }
+
+    .completion-button:hover {
+      background-color: #16A34A;
+      transform: translateY(-2px);
+    }
+
+    .quiz-container {
+      background-color: var(--gray-100);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      margin-top: 2rem;
+    }
+
+    .quiz-option {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      background-color: var(--white);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .quiz-option:hover {
+      background-color: var(--gray-100);
+    }
+
+    .quiz-option input {
+      margin-right: 1rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 991px) {
+      .lesson-container {
+        grid-template-columns: 1fr;
+      }
+
+      .code-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+        <a href="progression.html">Ma progression</a>
+        <a href="about.html">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Section principale -->
+  <section style="background-color: var(--gray-100); padding: 2rem 0;">
+    <div class="container">
+      <h1 id="subject-title">Cours</h1>
+      <div id="breadcrumb" style="color: var(--gray-600); margin-top: 0.5rem;"></div>
+    </div>
+  </section>
+
+  <!-- Contenu des cours -->
+  <section>
+    <div class="container">
+      <div class="lesson-container">
+        <!-- Contenu principal -->
+        <div id="lesson-main" class="lesson-content">
+          <div id="courses-grid"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <!-- Filtre de difficulté -->
+          <div class="sidebar-card">
+            <h4>Filtrer par niveau</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="difficulty" value="all" checked onchange="filterCourses('all')">
+                <span style="margin-left: 0.5rem;">Tous les niveaux</span>
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="difficulty" value="beginner" onchange="filterCourses('beginner')">
+                <span style="margin-left: 0.5rem;">🟢 Débutant</span>
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="difficulty" value="intermediate" onchange="filterCourses('intermediate')">
+                <span style="margin-left: 0.5rem;">🟠 Intermédiaire</span>
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="difficulty" value="advanced" onchange="filterCourses('advanced')">
+                <span style="margin-left: 0.5rem;">🔴 Avancé</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Progression -->
+          <div class="sidebar-card">
+            <h4>Ta Progression</h4>
+            <div style="margin-top: 1rem;">
+              <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">
+                <span id="completion-percent">0</span>%
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+              </div>
+              <p id="completion-text" style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;"></p>
+            </div>
+          </div>
+
+          <!-- Conseils -->
+          <div class="sidebar-card" style="background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%); border: 2px solid var(--primary-blue);">
+            <h4 style="color: var(--primary-blue);">💡 Conseil</h4>
+            <p style="font-size: 0.875rem; color: var(--gray-700); margin-top: 0.5rem;">Apprends à ton rythme et complète chaque leçon avant de passer à la suivante.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="progression.html#badges">Mes badges</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html">À propos</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/courses.js"></script>
+  <script src="js/progress.js"></script>
+
+  <script>
+    let currentSubject = 'html';
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Récupérer le sujet depuis l'URL
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('subject') || 'html';
+
+      // Mettre à jour le titre
+      const title = currentSubject === 'html' ? 'HTML5' : 'CSS3';
+      document.getElementById('subject-title').textContent = title;
+      document.getElementById('breadcrumb').textContent = 'Accueil / ' + title;
+
+      // Afficher les cours
+      displayCourses();
+      updateProgress();
+    });
+
+    function displayCourses() {
+      const container = document.getElementById('courses-grid');
+      let courses = getCoursesBySubject(currentSubject);
+
+      if (currentFilter !== 'all') {
+        courses = courses.filter(c => c.level === currentFilter);
+      }
+
+      let html = '<div class="grid grid-2">';
+
+      courses.forEach(course => {
+        const completed = localStorage.getItem(`course-${currentSubject}-${course.id}`) === 'true';
+        const completedClass = completed ? 'completed' : '';
+
+        html += `
+          <div class="card ${completedClass}">
+            <div class="card-header">
+              <span>${course.title}</span>
+              ${completed ? '<span style="color: #22C55E;">✓</span>' : ''}
+            </div>
+            <div class="card-body">
+              <p>${course.description}</p>
+              <div style="display: flex; gap: 1rem; justify-content: space-between; font-size: 0.875rem; color: #666; margin-top: 1rem;">
+                <span data-difficulty="${course.level}"></span>
+                <span>⏱ ${course.duration}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <a href="#" onclick="openLesson(${course.id}); return false;" class="btn btn-primary btn-small">
+                ${completed ? 'Revoir' : 'Commencer'}
+              </a>
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      container.innerHTML = html;
+
+      // Initialiser les badges de difficulté
+      document.querySelectorAll('[data-difficulty]').forEach(el => {
+        const level = el.getAttribute('data-difficulty');
+        const difficulties = {
+          'beginner': '🟢 Débutant',
+          'intermediate': '🟠 Intermédiaire',
+          'advanced': '🔴 Avancé'
+        };
+        if (difficulties[level]) {
+          el.textContent = difficulties[level];
+        }
+      });
+    }
+
+    function filterCourses(level) {
+      currentFilter = level;
+      displayCourses();
+    }
+
+    function updateProgress() {
+      const percent = getCompletionPercentage(currentSubject);
+      document.getElementById('completion-percent').textContent = percent;
+      document.getElementById('progress-fill').style.width = percent + '%';
+
+      const courses = getCoursesBySubject(currentSubject);
+      const completed = courses.filter(c =>
+        localStorage.getItem(`course-${currentSubject}-${c.id}`) === 'true'
+      ).length;
+
+      document.getElementById('completion-text').textContent = `${completed}/${courses.length} cours complétés`;
+    }
+
+    function openLesson(courseId) {
+      const course = getCourse(currentSubject, courseId);
+      if (!course) return;
+
+      const content = document.getElementById('courses-grid');
+
+      // Contenu pédagogique
+      let lessonHtml = `
+        <div class="lesson-content" style="background: none; box-shadow: none; padding: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2>${course.title}</h2>
+            <button onclick="displayCourses()" class="btn btn-secondary btn-small">← Retour</button>
+          </div>
+
+          <div style="background: #F0F9FF; padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 2rem; border-left: 4px solid var(--primary-blue);">
+            <h3 style="margin-top: 0; color: var(--primary-blue);">Objectifs de cette leçon</h3>
+            <ul style="margin-left: 1.5rem;">
+      `;
+
+      course.objectives.forEach(obj => {
+        lessonHtml += `<li>${obj}</li>`;
+      });
+
+      lessonHtml += `
+            </ul>
+          </div>
+
+          <div class="lesson-section">
+            <h3>📖 Explication</h3>
+            <p>${getCourseLessonContent(currentSubject, course.id).explanation}</p>
+          </div>
+
+          <div class="lesson-section">
+            <h3>💻 Exemple de code</h3>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-title">${getCourseLessonContent(currentSubject, course.id).codeType}</span>
+                <button class="btn-copy" onclick="copyCode(this)">Copier</button>
+              </div>
+              <code>${getCourseLessonContent(currentSubject, course.id).code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
+            </div>
+          </div>
+
+          <div class="lesson-section">
+            <h3>📋 Explication du code</h3>
+            ${getCourseLessonContent(currentSubject, course.id).codeExplanation}
+          </div>
+
+          <div class="lesson-section">
+            <h3>⚠️ Erreurs fréquentes</h3>
+            <ul style="margin-left: 1.5rem;">
+      `;
+
+      getCourseLessonContent(currentSubject, course.id).commonMistakes.forEach(mistake => {
+        lessonHtml += `<li>${mistake}</li>`;
+      });
+
+      lessonHtml += `
+            </ul>
+          </div>
+
+          <div class="lesson-section">
+            <h3>✍️ Petit exercice</h3>
+            <p>${getCourseLessonContent(currentSubject, course.id).exercise}</p>
+          </div>
+
+          <div class="quiz-container">
+            <h3>❓ Quiz de vérification</h3>
+            <div id="quiz-content">
+              ${generateQuiz(currentSubject, course.id)}
+            </div>
+          </div>
+
+          <button class="completion-button" onclick="markCourseComplete(${course.id})">✓ Marquer comme terminé</button>
+        </div>
+      `;
+
+      content.innerHTML = lessonHtml;
+      initCopyButtons();
+    }
+
+    function getCourseLessonContent(subject, courseId) {
+      const lessons = {
+        html: {
+          1: {
+            explanation: "Internet est un réseau mondial qui connecte des millions d'ordinateurs. Le Web (WWW) est un service d'Internet qui utilise des navigateurs pour afficher des pages HTML. Une page Web est créée avec du HTML (la structure), du CSS (le style) et parfois du JavaScript (l'interactivité).",
+            codeType: "Concepts clés",
+            code: "Internet → Web → Navigateur → Pages HTML → Ce que tu vois!",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>Navigateur</strong>: C'est le programme que tu utilises (Chrome, Firefox, Safari)</li><li><strong>Serveur</strong>: Un ordinateur qui stocke les pages Web</li><li><strong>HTML</strong>: Le langage pour créer les pages</li></ul>",
+            commonMistakes: ["Confondre Internet et le Web", "Penser que le code s'exécute sur son ordinateur au lieu du serveur"],
+            exercise: "Essaie d'ouvrir le code source d'une page Web (Ctrl+U sur Windows ou Cmd+U sur Mac). Tu verras du HTML!"
+          },
+          2: {
+            explanation: "Un site Web est composé de pages HTML qui sont liées entre elles. Chaque page a une structure avec un en-tête (header), un contenu principal, une barre latérale (sidebar) et un pied de page (footer). Les pages sont reliées par des liens que tu peux cliquer.",
+            codeType: "Structure d'un site Web",
+            code: "Page 1 (Accueil)\n   ↓\n  Lien\n   ↓\nPage 2 (À propos)\n   ↓\n  Lien\n   ↓\nPage 3 (Contact)",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>Domaine</strong>: L'adresse du site (example.com)</li><li><strong>Pages</strong>: Les différents contenus du site</li><li><strong>Ressources</strong>: Images, vidéos, styles CSS</li></ul>",
+            commonMistakes: ["Penser qu'un site n'est qu'une seule page", "Ne pas comprendre comment les pages se connectent"],
+            exercise: "Visite un site et essaie de compter combien de pages différentes il contient."
+          },
+          3: {
+            explanation: "HTML signifie HyperText Markup Language. C'est un langage de balisage qui utilise des 'balises' pour structurer le contenu. Une balise est écrite avec des chevrons < et >. Les balises s'ouvrent et se ferment pour entourer le contenu.",
+            codeType: "Syntaxe HTML",
+            code: "<balise>Contenu</balise>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>&lt;balise&gt;</strong>: Balise ouvrante</li><li><strong>Contenu</strong>: Le texte ou d'autres balises</li><li><strong>&lt;/balise&gt;</strong>: Balise fermante</li><li><strong>Attributs</strong>: Des informations dans la balise ouvrante (id='mon-id')</li></ul>",
+            commonMistakes: ["Oublier de fermer les balises", "Inverser l'ordre des balises fermantes"],
+            exercise: "Écris ta première balise: <h1>Bonjour le monde!</h1>"
+          },
+          4: {
+            explanation: "Une page HTML complète doit avoir une structure de base. Elle commence par une déclaration du type de document (DOCTYPE), puis une balise <html> qui contient une <head> (informations sur la page) et un <body> (le contenu visible).",
+            codeType: "Structure de page HTML",
+            code: "<!DOCTYPE html>\n<html>\n  <head>\n    <title>Ma page</title>\n  </head>\n  <body>\n    <h1>Bonjour!</h1>\n  </body>\n</html>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>&lt;!DOCTYPE html&gt;</strong>: Indique que c'est HTML5</li><li><strong>&lt;html&gt;</strong>: Enveloppe tout</li><li><strong>&lt;head&gt;</strong>: Titre, encodage, liens CSS</li><li><strong>&lt;body&gt;</strong>: Le contenu visible</li></ul>",
+            commonMistakes: ["Oublier le DOCTYPE", "Mettre du contenu visible dans la <head>"],
+            exercise: "Crée ta première page HTML et ouvre-la dans un navigateur!"
+          },
+          5: {
+            explanation: "Les titres sont importants pour structurer ton texte. Il y a 6 niveaux de titres, de <h1> (le plus important) à <h6> (le moins important). Chaque page devrait avoir exactement un <h1>. Les paragraphes utilisent la balise <p>.",
+            codeType: "Titres et paragraphes",
+            code: "<h1>Titre principal</h1>\n<h2>Sous-titre</h2>\n<h3>Sous-sous-titre</h3>\n<p>Ceci est un paragraphe.</p>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>&lt;h1&gt;</strong>: Titre niveau 1 (le plus gros)</li><li><strong>&lt;h2&gt; à &lt;h6&gt;</strong>: Titres de moins en moins importants</li><li><strong>&lt;p&gt;</strong>: Paragraphe de texte normal</li></ul>",
+            commonMistakes: ["Utiliser plusieurs <h1> sur une page", "Oublier que les titres ont une hiérarchie"],
+            exercise: "Crée une page avec un titre principal, 2-3 sous-titres et plusieurs paragraphes."
+          },
+          6: {
+            explanation: "Les images rendent les pages plus attrayantes. On utilise la balise <img> pour insérer une image. L'attribut 'src' indique où se trouve l'image, et 'alt' décrit l'image pour l'accessibilité et si l'image ne charge pas.",
+            codeType: "Insérer une image",
+            code: "<img src='photo.jpg' alt='Ma belle photo'>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>src</strong>: Le chemin vers le fichier image</li><li><strong>alt</strong>: Description de l'image (très important!)</li><li><strong>&lt;img&gt;</strong>: C'est une balise auto-fermante (pas de &lt;/img&gt;)</li></ul>",
+            commonMistakes: ["Oublier l'attribut alt", "Utiliser des chemins incorrects vers les images"],
+            exercise: "Trouve une image gratuite et ajoute-la à ta page Web."
+          },
+          7: {
+            explanation: "Les liens permettent de naviguer entre les pages. La balise <a> crée un lien. L'attribut 'href' indique où mène le lien. Tes liens peuvent pointer vers d'autres pages de ton site ou vers des sites externes.",
+            codeType: "Créer des liens",
+            code: "<a href='https://www.google.com'>Google</a>\n<a href='contact.html'>Me contacter</a>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>href</strong>: L'adresse de destination</li><li><strong>https://</strong>: Pour les sites externes</li><li><strong>fichier.html</strong>: Pour les fichiers de ton site</li><li>Le texte entre &lt;a&gt; et &lt;/a&gt; est le texte cliquable</li></ul>",
+            commonMistakes: ["Oublier https:// pour les sites externes", "Mauvais chemin vers les fichiers"],
+            exercise: "Crée une page 'À propos' et un lien vers elle depuis ta page d'accueil."
+          },
+          8: {
+            explanation: "Les listes servent à organiser les informations. Il y a deux types: les listes non ordonnées (<ul>) avec des points, et les listes ordonnées (<ol>) avec des numéros. Chaque élément de liste utilise la balise <li>.",
+            codeType: "Les listes",
+            code: "<ul>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ul>\n\n<ol>\n  <li>Première</li>\n  <li>Deuxième</li>\n</ol>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>&lt;ul&gt;</strong>: Unordered List (liste non ordonnée)</li><li><strong>&lt;ol&gt;</strong>: Ordered List (liste ordonnée)</li><li><strong>&lt;li&gt;</strong>: List Item (élément de liste)</li><li>Tu peux imbriquer des listes!</li></ul>",
+            commonMistakes: ["Oublier les balises <li>", "Mélanger <ul> et <ol>"],
+            exercise: "Crée une liste d'tes 5 jeux vidéo préférés et une liste d'tes étapes pour faire un gâteau."
+          },
+          9: {
+            explanation: "Les tableaux organisent les données en lignes et colonnes. La balise <table> crée un tableau. <tr> crée une ligne, <td> une cellule de données, et <th> une cellule d'en-tête.",
+            codeType: "Structure d'un tableau",
+            code: "<table>\n  <tr>\n    <th>Nom</th>\n    <th>Âge</th>\n  </tr>\n  <tr>\n    <td>Alice</td>\n    <td>12</td>\n  </tr>\n</table>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>&lt;table&gt;</strong>: Enveloppe le tableau</li><li><strong>&lt;tr&gt;</strong>: Table Row (ligne)</li><li><strong>&lt;th&gt;</strong>: Table Header (en-tête)</li><li><strong>&lt;td&gt;</strong>: Table Data (cellule)</li></ul>",
+            commonMistakes: ["Oublier les balises <tr>", "Mélanger <th> et <td>"],
+            exercise: "Crée un tableau de tes classes et tes profs."
+          },
+          10: {
+            explanation: "Maintenant, combine tout ce que tu as appris pour créer ta première page personnelle! Elle doit avoir un titre, une photo, une description, tes intérêts dans une liste, et des liens.",
+            codeType: "Projet final",
+            code: "<!DOCTYPE html>\n<html>\n  <body>\n    <h1>À propos de moi</h1>\n    <img src='ma-photo.jpg' alt='Ma photo'>\n    <p>Je suis...</p>\n    <h2>Mes intérêts</h2>\n    <ul>\n      <li>Informatique</li>\n      <li>Jeux vidéo</li>\n    </ul>\n  </body>\n</html>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li>Combine les balises apprises</li><li>Ajoute du texte personnel</li><li>Insère une photo</li><li>Crée une liste de tes passions</li></ul>",
+            commonMistakes: ["Ne pas vérifier que les balises sont fermées", "Oublier les attributs alt"],
+            exercise: "Crée et complète ta première page Web personnelle!"
+          }
+        },
+        css: {
+          1: {
+            explanation: "CSS signifie Cascading Style Sheets. C'est un langage pour styliser le HTML. On peut ajouter CSS de trois façons: en ligne (dans la balise), dans une balise <style>, ou dans un fichier séparé. La meilleure méthode est d'utiliser un fichier séparé.",
+            codeType: "Syntaxe CSS de base",
+            code: "p {\n  color: blue;\n  font-size: 16px;\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>p</strong>: Le sélecteur (quel élément styliser)</li><li><strong>{ }</strong>: Les accolades enferment les propriétés</li><li><strong>color</strong>: Propriété CSS</li><li><strong>blue</strong>: Valeur</li><li><strong>;</strong>: Point-virgule obligatoire</li></ul>",
+            commonMistakes: ["Oublier les points-virgules", "Oublier les accolades", "Mauvaise syntaxe des couleurs"],
+            exercise: "Crée une règle CSS pour les titres <h1> avec la couleur rouge."
+          },
+          2: {
+            explanation: "Les sélecteurs CSS permettent de cibler les éléments à styliser. Le sélecteur d'élément cible tous les éléments du même type. Le sélecteur de classe cible les éléments avec une classe spécifique. Le sélecteur d'ID cible un élément unique.",
+            codeType: "Types de sélecteurs",
+            code: "/* Sélecteur d'élément */\np { color: black; }\n\n/* Sélecteur de classe */\n.special { color: red; }\n\n/* Sélecteur d'ID */\n#titre { font-size: 24px; }",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>p</strong>: Tous les paragraphes</li><li><strong>.special</strong>: Les éléments avec class='special'</li><li><strong>#titre</strong>: L'élément avec id='titre'</li><li>Les classes peuvent être utilisées plusieurs fois</li><li>Les ID doivent être uniques</li></ul>",
+            commonMistakes: ["Confondre . (classe) et # (ID)", "Utiliser le même ID plusieurs fois"],
+            exercise: "Crée une classe 'important' et stylise-la avec une couleur spéciale."
+          },
+          3: {
+            explanation: "Les couleurs en CSS peuvent être spécifiées de plusieurs façons: avec des noms (red, blue), des codes hexadécimaux (#FF0000), ou RGB (rgb(255,0,0)). Pour les arrière-plans, on utilise background-color.",
+            codeType: "Couleurs et arrière-plans",
+            code: "h1 { color: #3B82F6; }\nbody { background-color: #F3F4F6; }\n.accent { background-color: rgb(236, 72, 153); }",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>color</strong>: Couleur du texte</li><li><strong>background-color</strong>: Couleur de fond</li><li><strong>#FF0000</strong>: Code hexadécimal (red)</li><li><strong>rgb(r, g, b)</strong>: Valeurs rouge, vert, bleu (0-255)</li></ul>",
+            commonMistakes: ["Oublier le # dans les codes hexadécimaux", "Mauvaise lisibilité (texte et fond de même couleur)"],
+            exercise: "Crée une page avec un fond bleu ciel et du texte bleu foncé."
+          },
+          4: {
+            explanation: "La typographie rend tes textes beaux et lisibles. On peut changer la police (font-family), la taille (font-size), l'épaisseur (font-weight), et le style (font-style comme italic). Les polices de base sont: Arial, Times New Roman, Courier New.",
+            codeType: "Propriétés typographiques",
+            code: "body { font-family: Arial, sans-serif; }\nh1 { font-size: 32px; font-weight: bold; }\np { font-style: italic; }",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>font-family</strong>: La police (Arial, Times, etc.)</li><li><strong>font-size</strong>: La taille (px, em, %)</li><li><strong>font-weight</strong>: L'épaisseur (normal, bold, 700)</li><li><strong>font-style</strong>: L'inclinaison (italic, normal)</li></ul>",
+            commonMistakes: ["Trop de polices différentes", "Texte trop petit", "Mauvais contraste de couleurs"],
+            exercise: "Crée une page avec 3 polices et 3 tailles différentes."
+          },
+          5: {
+            explanation: "Le Box Model est fondamental en CSS. Chaque élément a: margin (espace à l'extérieur), border (bordure), padding (espace intérieur), et width/height (largeur/hauteur). Comprendre ce modèle est clé pour la mise en page.",
+            codeType: "Box Model",
+            code: "div {\n  margin: 20px;      /* Espace autour */\n  padding: 15px;     /* Espace intérieur */\n  border: 2px solid #000;\n  width: 200px;\n  height: 100px;\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>margin</strong>: Espace AUTOUR (à l'extérieur)</li><li><strong>padding</strong>: Espace À L'INTÉRIEUR</li><li><strong>border</strong>: La bordure de l'élément</li><li><strong>width, height</strong>: Dimensions de l'élément</li></ul>",
+            commonMistakes: ["Confondre margin et padding", "Oublier que les marges se additionnent"],
+            exercise: "Crée 3 boîtes avec marges, padding et bordures différents."
+          },
+          6: {
+            explanation: "Flexbox est un système de mise en page moderne qui facilite l'alignement des éléments. On utilise display: flex sur le conteneur, puis flex-direction, justify-content et align-items pour positionner les enfants.",
+            codeType: "Flexbox",
+            code: ".container {\n  display: flex;\n  justify-content: center;  /* Centrer horizontalement */\n  align-items: center;      /* Centrer verticalement */\n  gap: 10px;                /* Espace entre les éléments */\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>display: flex</strong>: Active Flexbox</li><li><strong>justify-content</strong>: Alignement horizontal</li><li><strong>align-items</strong>: Alignement vertical</li><li><strong>gap</strong>: Espace entre les enfants</li></ul>",
+            commonMistakes: ["Oublier que flex s'applique aux enfants", "Confondre justify-content et align-items"],
+            exercise: "Crée une navigation avec Flexbox et des boutons alignés horizontalement."
+          },
+          7: {
+            explanation: "CSS Grid est un système de grille qui permet de créer des layouts complexes. On définit le nombre de colonnes et de lignes, puis on place les éléments. C'est très puissant pour les designs modernes.",
+            codeType: "CSS Grid",
+            code: ".grid {\n  display: grid;\n  grid-template-columns: 1fr 2fr 1fr;  /* 3 colonnes */\n  gap: 20px;\n}\n.grid-item:first-child {\n  grid-column: 1 / 4;  /* S'étend sur 3 colonnes */\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>display: grid</strong>: Active Grid</li><li><strong>grid-template-columns</strong>: Largeur des colonnes</li><li><strong>1fr</strong>: Unité flexible (une fraction)</li><li><strong>gap</strong>: Espace entre les éléments</li></ul>",
+            commonMistakes: ["Ne pas comprendre les unités (fr, px, %)", "Grilles trop complexes au départ"],
+            exercise: "Crée une mise en page simple: en-tête, contenu à gauche et sidebar à droite."
+          },
+          8: {
+            explanation: "Les transitions et animations CSS ajoutent du mouvement à ta page. Les transitions changent les propriétés progressivement. Les animations utilisent des keyframes pour créer des séquences de mouvements plus complexes.",
+            codeType: "Transitions et animations",
+            code: "/* Transition */\nbutton {\n  transition: background-color 0.3s ease;\n}\nbutton:hover { background-color: blue; }\n\n/* Animation */\n@keyframes slide {\n  from { left: 0; }\n  to { left: 100px; }\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>transition</strong>: Change progressive d'une propriété</li><li><strong>@keyframes</strong>: Définit les étapes d'une animation</li><li><strong>0.3s</strong>: Durée en secondes</li><li><strong>ease</strong>: Type d'accélération</li></ul>",
+            commonMistakes: ["Trop d'animations (ralentit la page)", "Animations trop longues ou trop courtes"],
+            exercise: "Crée un bouton qui change de couleur avec une transition au survol."
+          },
+          9: {
+            explanation: "Le Responsive Design rend ta page adaptée à tous les appareils (ordinateur, tablette, mobile). On utilise les media queries pour appliquer des styles différents selon la taille de l'écran. La règle de base: commencer par le mobile puis ajouter de la complexité.",
+            codeType: "Media Queries",
+            code: "/* Desktop */\n.container { width: 1200px; }\n\n/* Tablette */\n@media (max-width: 768px) {\n  .container { width: 100%; }\n}\n\n/* Mobile */\n@media (max-width: 480px) {\n  .container { padding: 10px; }\n}",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li><strong>@media</strong>: Applique CSS sous conditions</li><li><strong>max-width</strong>: Si l'écran est plus petit que...</li><li><strong>768px</strong>: Largeur limite pour tablette</li><li><strong>480px</strong>: Largeur limite pour mobile</li></ul>",
+            commonMistakes: ["Ne pas tester sur mobile", "Oublier la balise viewport dans le HTML"],
+            exercise: "Crée une mise en page qui s'adapte bien sur mobile, tablette et desktop."
+          },
+          10: {
+            explanation: "C'est maintenant le moment de créer un site Web complet! Utilise HTML pour la structure et CSS pour la mise en page. Applique tout ce que tu as appris: layout Flexbox/Grid, animations, responsive design, et bonne accessibilité.",
+            codeType: "Projet final",
+            code: "<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial; }\n    .container { max-width: 1200px; }\n    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }\n    @media (max-width: 768px) {\n      .grid { grid-template-columns: 1fr; }\n    }\n  </style>\n</head>\n<body>...</body>\n</html>",
+            codeExplanation: "<ul style='margin-left: 1.5rem;'><li>Combine HTML structure + CSS style</li><li>Utilise Flexbox ou Grid pour la mise en page</li><li>Rends-la responsive avec media queries</li><li>Ajoute des animations</li></ul>",
+            commonMistakes: ["Trop de complexité au départ", "Négliger le responsive design", "Code non organisé"],
+            exercise: "Crée un portfolio personnel avec projets, à propos, et contact!"
+          }
+        }
+      };
+
+      return lessons[subject]?.[courseId] || {
+        explanation: "Contenu à venir...",
+        codeType: "Code",
+        code: "<!-- Contenu en préparation -->",
+        codeExplanation: "Le contenu pédagogique sera bientôt disponible.",
+        commonMistakes: [],
+        exercise: ""
+      };
+    }
+
+    function generateQuiz(subject, courseId) {
+      const quizzes = {
+        html: {
+          1: [
+            {
+              question: "Quelle est la différence entre Internet et le Web?",
+              options: [
+                "Il n'y a pas de différence",
+                "Internet est le réseau, le Web est un service d'Internet",
+                "Internet est plus lent que le Web",
+                "Le Web existe depuis plus longtemps qu'Internet"
+              ],
+              correct: 1
+            }
+          ],
+          3: [
+            {
+              question: "Comment s'écrit une balise HTML?",
+              options: [
+                "[balise]Contenu[/balise]",
+                "{balise}Contenu{/balise}",
+                "<balise>Contenu</balise>",
+                "(balise)Contenu(/balise)"
+              ],
+              correct: 2
+            }
+          ],
+          4: [
+            {
+              question: "Quelles balises sont essentielles dans une page HTML?",
+              options: [
+                "<html>, <p>, <a>",
+                "<html>, <head>, <body>",
+                "<div>, <span>, <section>",
+                "<h1>, <h2>, <h3>"
+              ],
+              correct: 1
+            }
+          ]
+        },
+        css: {
+          1: [
+            {
+              question: "Quelle est la bonne syntaxe CSS?",
+              options: [
+                "p { color: blue }",
+                "p [ color: blue ]",
+                "p > color: blue <",
+                "p ( color: blue )"
+              ],
+              correct: 0
+            }
+          ],
+          3: [
+            {
+              question: "Comment écrit-on la couleur rouge en CSS?",
+              options: [
+                "color: #00FF00",
+                "color: #FF0000",
+                "color: #0000FF",
+                "color: red (#FF0000)"
+              ],
+              correct: 1
+            }
+          ]
+        }
+      };
+
+      const questions = quizzes[subject]?.[courseId] || [];
+      if (questions.length === 0) return "<p>Quiz indisponible pour cette leçon.</p>";
+
+      let html = `
+        <form onsubmit="event.preventDefault(); checkQuiz();">
+      `;
+
+      questions.forEach((q, idx) => {
+        html += `
+          <div style="margin-bottom: 1.5rem;">
+            <p><strong>${idx + 1}. ${q.question}</strong></p>
+            <div>
+        `;
+
+        q.options.forEach((opt, optIdx) => {
+          html += `
+            <label style="display: block; margin-bottom: 0.5rem;">
+              <input type="radio" name="q${idx}" value="${optIdx}">
+              ${opt}
+            </label>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+        <button type="submit" class="btn btn-primary">Vérifier mes réponses</button>
+        </form>
+      `;
+
+      return html;
+    }
+
+    function markCourseComplete(courseId) {
+      completeCourse(currentSubject, courseId);
+      updateProgress();
+      displayCourses();
+      alert('✓ Cours marqué comme terminé! Bien joué!');
+    }
+
+    function checkQuiz() {
+      alert('Quiz vérifié! Bien répondu!');
+    }
+  </script>
+</body>
+</html>

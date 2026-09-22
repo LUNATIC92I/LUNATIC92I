@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebKids Academy - Apprends à créer ton propre site Web</title>
+  <meta name="description" content="Plateforme d'apprentissage pour apprendre HTML5 et CSS3 à partir de 8 ans">
+  <meta name="theme-color" content="#3B82F6">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <style>
+    /* Styles spécifiques à l'accueil */
+    .hero-code-visual {
+      background-color: var(--gray-900);
+      color: #60A5FA;
+      padding: 2rem;
+      border-radius: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 2rem auto;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--gray-700);
+    }
+
+    .step-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .course-grid-home {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: 2rem;
+    }
+
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: var(--spacing-lg);
+      background-color: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .code-preview {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      padding: 2rem;
+      border-radius: 1rem;
+      margin: 2rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .code-preview::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    .code-line {
+      font-family: var(--font-mono);
+      color: #60A5FA;
+      margin-bottom: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .code-tag {
+      color: #F97316;
+    }
+
+    .code-text {
+      color: #E2E8F0;
+    }
+
+    .code-attr {
+      color: #A78BFA;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">WebKids Academy</a>
+
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+        <a href="progression.html">Ma progression</a>
+        <a href="about.html">À propos</a>
+      </nav>
+
+      <button class="btn-menu" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h1>Crée ton premier site Web!</h1>
+      <p>Apprends HTML5 et CSS3 étape par étape, découvre comment fonctionne le Web et transforme tes idées en véritables pages Web.</p>
+
+      <div class="hero-buttons">
+        <a href="cours.html?subject=html" class="btn btn-primary btn-large">Commencer gratuitement</a>
+        <a href="#comment-ca-marche" class="btn btn-outline btn-large">Découvrir les cours</a>
+      </div>
+
+      <!-- Visualisation du code -->
+      <div class="hero-code-visual">
+        <div class="code-line"><span class="code-tag">&lt;h1&gt;</span><span class="code-text">Bienvenue!</span><span class="code-tag">&lt;/h1&gt;</span></div>
+        <div class="code-line"><span class="code-tag">&lt;p&gt;</span><span class="code-text">Mon premier site Web</span><span class="code-tag">&lt;/p&gt;</span></div>
+        <div class="code-line" style="color: #22C55E; margin-top: 1rem;">→ Résultat visible ✓</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Comment ça marche -->
+  <section id="comment-ca-marche" class="alt">
+    <div class="container">
+      <h2 style="text-align: center;">Comment ça marche?</h2>
+
+      <div class="grid grid-4" style="margin-top: 2rem;">
+        <!-- Étape 1 -->
+        <div class="card" style="text-align: center;">
+          <div class="step-number">01</div>
+          <h3>Découvrir</h3>
+          <p>Comprendre comment fonctionne une page Web et les bases du HTML et CSS.</p>
+          <div class="feature-icon">🔍</div>
+        </div>
+
+        <!-- Étape 2 -->
+        <div class="card" style="text-align: center;">
+          <div class="step-number">02</div>
+          <h3>Apprendre</h3>
+          <p>Découvrir HTML5 et CSS3 avec des explications simples et des exemples concrets.</p>
+          <div class="feature-icon">📚</div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div class="card" style="text-align: center;">
+          <div class="step-number">03</div>
+          <h3>Pratiquer</h3>
+          <p>Écrire du vrai code et réaliser des exercices pour maîtriser les concepts.</p>
+          <div class="feature-icon">✍️</div>
+        </div>
+
+        <!-- Étape 4 -->
+        <div class="card" style="text-align: center;">
+          <div class="step-number">04</div>
+          <h3>Créer</h3>
+          <p>Construire tes propres sites Web et partager tes créations avec le monde.</p>
+          <div class="feature-icon">🚀</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Cours principaux -->
+  <section>
+    <div class="container">
+      <h2 style="text-align: center;">Nos Cours</h2>
+      <p style="text-align: center; color: var(--gray-600); font-size: var(--font-size-lg);">Découvre nos deux matières principales</p>
+
+      <div class="grid grid-2" style="margin-top: 2rem;">
+        <!-- HTML5 -->
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size: 1.5rem;">📄</span>
+            <span>HTML5 - La structure</span>
+          </div>
+          <div class="card-body">
+            <p>HTML est le langage de base d'Internet. C'est avec HTML que tu créeras la structure de tes pages Web.</p>
+            <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+              <li>Introduction à HTML</li>
+              <li>Les balises essentielles</li>
+              <li>Structure sémantique</li>
+              <li>Formulaires HTML5</li>
+              <li>Accessibilité</li>
+            </ul>
+            <div style="margin-top: 1rem;">
+              <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">
+                Progression: <span id="html-progress">0</span>%
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 0%;" data-progress="html"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="cours.html?subject=html" class="btn btn-primary">Commencer HTML5</a>
+          </div>
+        </div>
+
+        <!-- CSS3 -->
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size: 1.5rem;">🎨</span>
+            <span>CSS3 - Le style</span>
+          </div>
+          <div class="card-body">
+            <p>CSS permet de styliser tes pages et les rendre belles. Crée des mises en page professionnelles.</p>
+            <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+              <li>Sélecteurs CSS</li>
+              <li>Couleurs et arrière-plans</li>
+              <li>Flexbox et Grid</li>
+              <li>Animations CSS</li>
+              <li>Responsive design</li>
+            </ul>
+            <div style="margin-top: 1rem;">
+              <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">
+                Progression: <span id="css-progress">0</span>%
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 0%;" data-progress="css"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="cours.html?subject=css" class="btn btn-primary">Commencer CSS3</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Statistiques -->
+  <section class="alt">
+    <div class="container">
+      <h2 style="text-align: center;">Pourquoi apprendre avec WebKids Academy?</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg); margin-top: 2rem;">
+        <div class="stat-box">
+          <div class="stat-number">100%</div>
+          <p>Gratuit et sans inscription</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">50+</div>
+          <p>Exercices interactifs</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">8 à 16</div>
+          <p>Ans - Adapté à ton âge</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">10+</div>
+          <p>Challenges à relever</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Apprenants -->
+  <section>
+    <div class="container">
+      <h2 style="text-align: center;">Qui peut apprendre?</h2>
+
+      <div class="grid grid-3" style="margin-top: 2rem;">
+        <!-- Débutants -->
+        <div class="card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">👶</div>
+          <h3>Débutants (8-10 ans)</h3>
+          <p>Tu découvres Internet pour la première fois? Commence ici! Nous t'expliquerons les bases avec un langage simple.</p>
+          <a href="cours.html?subject=html" class="btn btn-primary btn-small" style="margin-top: 1rem;">Débuter</a>
+        </div>
+
+        <!-- Intermédiaires -->
+        <div class="card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">👧</div>
+          <h3>Intermédiaires (11-13 ans)</h3>
+          <p>Tu as déjà des notions? Approfondis tes connaissances avec nos cours avancés et tes premiers projets.</p>
+          <a href="cours.html?subject=html" class="btn btn-primary btn-small" style="margin-top: 1rem;">Continuer</a>
+        </div>
+
+        <!-- Avancés -->
+        <div class="card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">👨</div>
+          <h3>Avancés (14-16 ans)</h3>
+          <p>Prêt pour les défis? Crée des sites Web professionnels et maîtrise les techniques modernes.</p>
+          <a href="challenges.html" class="btn btn-primary btn-small" style="margin-top: 1rem;">Challenges</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section CTA -->
+  <section class="alt">
+    <div class="container" style="text-align: center;">
+      <h2>Prêt à commencer?</h2>
+      <p style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-xl);">La création Web n'a jamais été aussi simple. Commence ton apprentissage dès maintenant, gratuitement!</p>
+
+      <div style="display: flex; gap: var(--spacing-lg); justify-content: center; flex-wrap: wrap;">
+        <a href="cours.html?subject=html" class="btn btn-primary btn-large">Commencer HTML5</a>
+        <a href="cours.html?subject=css" class="btn btn-secondary btn-large">Découvrir CSS3</a>
+        <a href="exercices.html" class="btn btn-outline btn-large">Explorer les exercices</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div>
+        <h4>WebKids Academy</h4>
+        <p class="footer-tagline">Apprendre aujourd'hui. Créer demain.</p>
+        <p>Une plateforme d'apprentissage gratuite pour apprendre le développement Web dès le plus jeune âge.</p>
+      </div>
+
+      <div>
+        <h4>Apprentissage</h4>
+        <a href="cours.html?subject=html">HTML5</a>
+        <a href="cours.html?subject=css">CSS3</a>
+        <a href="exercices.html">Exercices</a>
+        <a href="challenges.html">Challenges</a>
+      </div>
+
+      <div>
+        <h4>Profil</h4>
+        <a href="progression.html">Ma progression</a>
+        <a href="progression.html#badges">Mes badges</a>
+        <a href="#">Mes projets</a>
+      </div>
+
+      <div>
+        <h4>Infos</h4>
+        <a href="about.html">À propos</a>
+        <a href="#">Conditions</a>
+        <a href="#">Confidentialité</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 WebKids Academy — Tous droits réservés. Apprendre le Web, c'est créer l'avenir! 🚀</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/courses.js"></script>
+  <script src="js/progress.js"></script>
+
+  <script>
+    // Mettre à jour les progressions à l'accueil
+    document.addEventListener('DOMContentLoaded', function() {
+      const htmlPercent = getCompletionPercentage('html');
+      const cssPercent = getCompletionPercentage('css');
+
+      document.getElementById('html-progress').textContent = htmlPercent;
+      document.getElementById('css-progress').textContent = cssPercent;
+
+      updateProgressBars('html');
+      updateProgressBars('css');
+    });
+  </script>
+</body>
+</html>
