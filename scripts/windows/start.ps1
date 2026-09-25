@@ -38,21 +38,74 @@ function Write-Warn($message) { Write-Host $message -ForegroundColor Yellow }
 function Write-Fail($message) { Write-Host $message -ForegroundColor Red }
 function Write-Ok($message) { Write-Host $message -ForegroundColor Green }
 
+function Wait-DockerEngine([int]$TimeoutSeconds = 120) {
+    $elapsed = 0
+    while ($elapsed -lt $TimeoutSeconds) {
+        docker info *>$null
+        if ($LASTEXITCODE -eq 0) { return $true }
+        Start-Sleep -Seconds 5
+        $elapsed += 5
+    }
+    return $false
+}
+
 Write-Host "== LUNATIC-IT SIEM - Windows launcher ==" -ForegroundColor Cyan
 
 # --- 1. Docker Desktop present and running ------------------------------
+# If the docker CLI isn't even installed, fetch and launch the official
+# installer automatically instead of just pointing the user at a download
+# page - this is the one real external dependency the stack has, so
+# handling its acquisition here is what actually gets close to "no
+# dependency left to chase down yourself". Deliberately NOT a silent
+# /quiet install, though: Docker Desktop's own EULA and any reboot/WSL2
+# prompt are things the user should see and approve themselves on their
+# own machine, not something this script hides from them.
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Fail "Docker introuvable dans le PATH."
-    Write-Host "Installez Docker Desktop (avec le backend WSL2) : https://www.docker.com/products/docker-desktop/"
-    exit 1
+    Write-Warn "Docker introuvable - telechargement de l'installateur officiel Docker Desktop..."
+    $installerPath = Join-Path $env:TEMP "DockerDesktopInstaller.exe"
+    try {
+        Invoke-WebRequest -Uri "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe" `
+            -OutFile $installerPath -UseBasicParsing -ErrorAction Stop
+    } catch {
+        Write-Fail "echec du telechargement de Docker Desktop : $($_.Exception.Message)"
+        Write-Host "Installez-le manuellement : https://www.docker.com/products/docker-desktop/"
+        exit 1
+    }
+
+    Write-Step "Lancement de l'installateur Docker Desktop - suivez ses instructions a l'ecran"
+    Start-Process -FilePath $installerPath -Wait
+
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-Fail "Docker n'est toujours pas disponible apres l'installation."
+        Write-Warn "Si l'installateur a demande un redemarrage de Windows, redemarrez puis relancez ce fichier."
+        exit 1
+    }
+    Write-Ok "Docker installe."
 }
 
+# The docker CLI can be present while the Docker Desktop application
+# (the actual background engine) isn't running yet - launch it and wait
+# for it, rather than failing immediately on the first check.
 docker info *>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "Docker Desktop ne repond pas."
-    Write-Host "Demarrez Docker Desktop, attendez qu'il affiche 'Engine running', puis relancez ce script."
-    exit 1
+    $dockerDesktopExe = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+    if (Test-Path $dockerDesktopExe) {
+        Write-Step "Demarrage de Docker Desktop..."
+        Start-Process -FilePath $dockerDesktopExe
+    } else {
+        Write-Warn "Docker Desktop ne repond pas et son executable n'a pas ete trouve a l'emplacement standard."
+        Write-Warn "Demarrez-le manuellement depuis le menu Demarrer."
+    }
+
+    Write-Step "Attente du demarrage du moteur Docker (jusqu'a 2 minutes)..."
+    if (-not (Wait-DockerEngine -TimeoutSeconds 120)) {
+        Write-Fail "Docker Desktop ne repond toujours pas apres 2 minutes."
+        Write-Host "Ouvrez Docker Desktop manuellement, attendez qu'il affiche 'Engine running', puis relancez ce fichier."
+        exit 1
+    }
 }
+
+Write-Ok "Docker est pret."
 
 # --- 2. Prepare .env (never overwrite an existing one) -------------------
 $envPath = Join-Path $repoRoot ".env"

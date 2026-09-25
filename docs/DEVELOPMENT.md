@@ -53,16 +53,27 @@ backend** rather than native `cmd.exe`/PowerShell tooling:
 3. From a WSL2 shell: the exact commands above (`cp .env.example .env`,
    `docker compose up -d --build`) work unchanged.
 
-For a one-click launch from Windows itself (no WSL2 shell needed once Docker
-Desktop is installed), double-click **`Demarrer-LUNATIC-SIEM.bat`** at the
-repository root. It is the Windows equivalent of the two commands above: it
-checks Docker Desktop is running, creates `.env` from `.env.example` on
-first run (generating a real Fernet key for `MFA_ENCRYPTION_KEY` — the one
-default that is a placeholder string rather than something directly usable
-— and leaving every other value as shipped, which is fine for a throwaway
-local run per that file's own comments), runs `docker compose up -d
---build`, waits for `/health`, and opens the frontend in your default
-browser. It never overwrites an existing `.env`.
+For a one-click launch from Windows itself (no WSL2 shell needed), double-click
+**`Demarrer-LUNATIC-SIEM.bat`** at the repository root. It is the Windows
+equivalent of the two commands above, and handles Docker Desktop itself —
+the one real external dependency the stack has — rather than assuming it's
+already there:
+
+- **Docker not installed at all**: downloads the official Docker Desktop
+  installer and launches it (its own UI, not a silent `/quiet` install —
+  the EULA and any reboot/WSL2 prompt are things you approve yourself, not
+  something this script hides), then continues automatically once you're
+  done with it.
+- **Docker installed but not running**: launches Docker Desktop and waits
+  up to 2 minutes for its engine to answer before giving up with a clear
+  message.
+- Once Docker is ready: creates `.env` from `.env.example` on first run
+  (generating a real Fernet key for `MFA_ENCRYPTION_KEY` — the one default
+  that is a placeholder string rather than something directly usable — and
+  leaving every other value as shipped, which is fine for a throwaway local
+  run per that file's own comments), runs `docker compose up -d --build`,
+  waits for `/health`, and opens the frontend in your default browser. It
+  never overwrites an existing `.env`.
 
 On its first successful run it also drops a **`LUNATIC-IT SIEM` shortcut on
 the Windows Desktop** pointing back at that same launcher (idempotent — it
